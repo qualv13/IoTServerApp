@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  # Baza danych
+  postgres:
+    image: postgres:15-alpine
+    container_name: iot_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=iot_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+#  # Broker wiadomości (AMQP + MQTT)
+#  rabbitmq:
+#    image: rabbitmq:3-management
+#    container_name: iot_rabbitmq
+#    ports:
+#      - "5672:5672"   # AMQP (Spring Boot connection)
+#      - "15672:15672" # Management UI (http://localhost:15672)
+#      - "1883:1883"   # MQTT Port (IoT Devices connection)
+#    environment:
+#      - RABBITMQ_DEFAULT_USER=guest
+#      - RABBITMQ_DEFAULT_PASS=guest
+#    # Ważne: Włączamy plugin MQTT przy starcie
+#    command: /bin/sh -c "rabbitmq-plugins enable rabbitmq_mqtt && rabbitmq-server"
+
+volumes:
+  postgres_data:

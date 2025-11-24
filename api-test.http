@@ -1,0 +1,17 @@
+### 1. Rejestracja nowego użytkownika
+POST http://localhost:8080/users
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "password123"
+}
+
+### 2. Logowanie (Pobranie tokena)
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "password123"
+}
