@@ -17,7 +17,7 @@ public class JwtService {
     @Value("${jwt.secret}")
     private String secret;
 
-    // 15 minut access, 90 dni refresh
+    // 15 min access, 90 days refresh
     private static final long ACCESS_Validity = 15 * 60 * 1000;
     private static final long REFRESH_Validity = 90L * 24 * 60 * 60 * 1000;
 

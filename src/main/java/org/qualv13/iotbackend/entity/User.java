@@ -2,7 +2,6 @@ package org.qualv13.iotbackend.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
@@ -15,7 +14,6 @@ import java.util.List;
 @Entity
 @Table(name = "users")
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class User implements UserDetails {
@@ -33,7 +31,7 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Zwracanie ról, np. List.of(new SimpleGrantedAuthority("ROLE_USER"));
+        // Returning roles. For example List.of(new SimpleGrantedAuthority("ROLE_USER"));
         return Collections.emptyList();
     }
 

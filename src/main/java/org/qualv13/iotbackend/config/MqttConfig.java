@@ -58,7 +58,7 @@ public class MqttConfig {
     public MqttPahoMessageDrivenChannelAdapter mqttInbound() {
         MqttPahoMessageDrivenChannelAdapter adapter =
                 new MqttPahoMessageDrivenChannelAdapter("serverListener", mqttClientFactory(),
-                        "lamps/+/metrics", "lamps/+/status");
+                        "lamps/+/metrics", "lamps/+/status", "fleets/+/status");
         adapter.setCompletionTimeout(5000);
         adapter.setConverter(new DefaultPahoMessageConverter());
         adapter.setQos(1);

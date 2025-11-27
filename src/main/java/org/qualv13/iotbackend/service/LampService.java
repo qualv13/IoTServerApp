@@ -1,5 +1,6 @@
 package org.qualv13.iotbackend.service;
 
+import com.iot.backend.proto.IotProtos;
 import org.qualv13.iotbackend.entity.Lamp;
 import org.qualv13.iotbackend.entity.User;
 import org.qualv13.iotbackend.repository.LampRepository;
@@ -21,14 +22,54 @@ public class LampService {
 
         Lamp lamp = lampRepository.findById(lampId).orElse(new Lamp());
 
-        // LOGIKA BIZNESOWA:
-        // Jeśli lampa miała właściciela, nadpisujemy go (re-selling).
-        // dodać logowanie zdarzenia, np. "Ownership transfer from X to Y"
+        // LOGIC:
+        // If lamp had owner, overwrite him (re-selling).
+        // add logs of event, ex. "Ownership transfer from X to Y"
 
         lamp.setId(lampId);
         lamp.setOwner(user);
-        lamp.setFleet(null); // Reset floty przy zmianie właściciela
+        lamp.setFleet(null); // Fleet reset when assigning to another user
 
         lampRepository.save(lamp);
+    }
+
+    @Transactional
+    public void updateLampStatus(String lampId, IotProtos.LampCommand command) {
+        Lamp lamp = lampRepository.findById(lampId)
+                .orElseThrow(() -> new RuntimeException("Lamp not found"));
+
+        // Protobuf Enum -> Boolean
+        // in .proto: enum Type { ON = 0; OFF = 1; }
+        if (command.getType() == IotProtos.LampCommand.Type.ON) {
+            lamp.setOn(true);
+        } else if (command.getType() == IotProtos.LampCommand.Type.OFF) {
+            lamp.setOn(false);
+        }
+
+        lampRepository.save(lamp);
+    }
+
+    @Transactional
+    public void updateLampConfig(String lampId, IotProtos.LampConfig protoConfig) {
+        Lamp lamp = lampRepository.findById(lampId)
+                .orElseThrow(() -> new RuntimeException("Lamp not found"));
+
+        // Protobuf -> Entity
+        lamp.setBrightness(protoConfig.getBrightness());
+        lamp.setColor(protoConfig.getColor());
+        lamp.setReportInterval(protoConfig.getReportInterval());
+
+        lampRepository.save(lamp);
+    }
+
+    public IotProtos.LampConfig getLampConfig(String lampId) {
+        Lamp lamp = lampRepository.findById(lampId)
+                .orElseThrow(() -> new RuntimeException("Lamp not found"));
+
+        return IotProtos.LampConfig.newBuilder()
+                .setBrightness(lamp.getBrightness() != null ? lamp.getBrightness() : 50)
+                .setColor(lamp.getColor() != null ? lamp.getColor() : "#ffffff")
+                .setReportInterval(lamp.getReportInterval() != null ? lamp.getReportInterval() : 60)
+                .build();
     }
 }

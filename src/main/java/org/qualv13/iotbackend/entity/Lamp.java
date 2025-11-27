@@ -18,6 +18,13 @@ public class Lamp {
     @JoinColumn(name = "fleet_id")
     private Fleet fleet;
 
-    // Przechowujemy ostatnią konfigurację w JSON lub polach prostych
-    private Integer readingFrequency;
+    //private Integer readingFrequency;
+
+    private Integer brightness = 50;
+    private String color = "#ffffff";
+    private Integer reportInterval = 60;
+
+    // Status
+    @Column(name = "is_on")
+    private boolean isOn = false;
 }

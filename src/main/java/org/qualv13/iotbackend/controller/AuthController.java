@@ -9,7 +9,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.*;import org.qualv13.iotbackend.dto.RefreshTokenRequest;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 
 @RestController
 @RequestMapping("/auth")
@@ -19,6 +21,7 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final JwtService jwtService;
+    private final UserDetailsService userDetailsService;
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
@@ -29,14 +32,36 @@ public class AuthController {
                 )
         );
 
-        // Pobieramy usera.
+        // Download user
         User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found")); // To się nie powinno wydarzyć po authenticate
+                .orElseThrow(() -> new RuntimeException("User not found")); // shouldn't happen after authentication
 
-        // Generujemy tokeny
+        // Token generation
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
         return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(@RequestBody RefreshTokenRequest request) {
+        String refreshToken = request.getRefreshToken();
+        String username = jwtService.extractUsername(refreshToken);
+
+        if (username != null) {
+            UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+
+            if (jwtService.isTokenValid(refreshToken, userDetails)) {
+                // Generating new tokens
+                User user = (User) userDetails;
+
+                String newAccessToken = jwtService.generateAccessToken(user);
+                // optional : new refresh token
+                String newRefreshToken = jwtService.generateRefreshToken(user);
+
+                return ResponseEntity.ok(new AuthResponse(newAccessToken, newRefreshToken));
+            }
+        }
+        return ResponseEntity.status(403).build();
     }
 }

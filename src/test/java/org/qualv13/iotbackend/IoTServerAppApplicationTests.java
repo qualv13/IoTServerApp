@@ -8,6 +8,7 @@ class IoTServerAppApplicationTests {
 
     @Test
     void contextLoads() {
+
     }
 
 }

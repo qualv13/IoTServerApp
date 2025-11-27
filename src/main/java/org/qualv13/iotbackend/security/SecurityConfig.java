@@ -23,19 +23,19 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configure(http)) // Włącz obsługę CORS z kontrolerów
+                .cors(cors -> cors.configure(http)) // Enable CORS
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Zezwól na pliki statyczne i stronę główną (TO NAPRAWI TWÓJ BŁĄD)
+                        // TODO: working security filter
                         .requestMatchers("/", "/index.html", "/static/**", "/*.js", "/*.css", "/favicon.ico").permitAll()
 
-                        // 2. Logowanie i Rejestracja
+                        // Login and Register
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users").permitAll() // Rejestracja
 
-                        // 3. Obsługa zapytań OPTIONS (dla CORS w przeglądarce)
+                        // Options
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 4. Reszta wymaga logowania
+                        //
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

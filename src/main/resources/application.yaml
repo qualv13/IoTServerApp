@@ -13,7 +13,6 @@ spring:
 mqtt:
   broker: tcp://srv38.mikr.us:40131
   client-id: server-backend-app
-  # Jeśli broker wymaga hasła (RabbitMQ zazwyczaj tak):
   username: iotproject
   password: iotproject
   topics:

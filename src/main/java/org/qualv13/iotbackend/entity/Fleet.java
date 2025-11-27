@@ -15,4 +15,8 @@ public class Fleet {
 
     @OneToMany(mappedBy = "fleet")
     private List<Lamp> lamps;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User owner;
 }

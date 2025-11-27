@@ -6,7 +6,6 @@ import org.qualv13.iotbackend.service.MqttService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.security.Principal;
 
 @RestController
 @RequestMapping("/lamps")
@@ -16,27 +15,47 @@ public class LampController {
     private final MqttService mqttService;
     private final LampService lampService;
 
-    // Przejęcie / Dodanie lampy
-    @PostMapping("/claim/{lampId}")
-    public ResponseEntity<Void> claimLamp(@PathVariable String lampId, Principal principal) {
-        lampService.assignLampToUser(principal.getName(), lampId);
+    // --- STATUS (GET) ---
+    @GetMapping(value = "/{lampId}/status", produces = "application/x-protobuf")
+    public IotProtos.LampStatus getStatus(@PathVariable String lampId) {
+        // TODO: Download latest known status from database (saved by MQTT Listener)
+        return IotProtos.LampStatus.newBuilder()
+                .setIsOn(true)
+                .setSensorValue(25.5)
+                .build();
+    }
+
+    // --- CONFIG (GET/PUT) ---
+    @GetMapping(value = "/{lampId}/config", produces = "application/x-protobuf")
+    public IotProtos.LampConfig getConfig(@PathVariable String lampId) {
+        return lampService.getLampConfig(lampId);
+    }
+
+    @PutMapping(value = "/{lampId}/config", consumes = "application/x-protobuf")
+    public ResponseEntity<Void> setConfig(@PathVariable String lampId,
+                                          @RequestBody IotProtos.LampConfig config) {
+        // Save in db
+        lampService.updateLampConfig(lampId, config);
+        // Send through MQTT
+        mqttService.sendConfigToLamp(lampId, config);
         return ResponseEntity.ok().build();
     }
 
-    // Wysłanie komendy (Protobuf)
+    // --- COMMAND (POST) ---
     @PostMapping(value = "/{lampId}/command", consumes = "application/x-protobuf")
     public ResponseEntity<Void> sendCommand(@PathVariable String lampId,
                                             @RequestBody IotProtos.LampCommand command) {
-        mqttService.sendCommand(lampId, command);
+        // Save in db
+        lampService.updateLampStatus(lampId, command);
+        // Send through MQTT
+        mqttService.sendCommandToLamp(lampId, command);
         return ResponseEntity.ok().build();
     }
 
-    // Pobranie statusu (Mock - tutaj powinieneś czytać z bazy zaktualizowanej przez MQTT)
-    @GetMapping(value = "/{lampId}/status", produces = "application/x-protobuf")
-    public IotProtos.LampStatus getStatus(@PathVariable String lampId) {
-        return IotProtos.LampStatus.newBuilder()
-                .setIsOn(true)
-                .setSensorValue(123.45)
-                .build();
+    // --- METRICS (GET) ---
+    @GetMapping("/{lampId}/metrics")
+    public ResponseEntity<String> getMetrics(@PathVariable String lampId) {
+        // TODO: Implement metrics from lamp get
+        return ResponseEntity.ok("{\"metrics\": []}");
     }
 }

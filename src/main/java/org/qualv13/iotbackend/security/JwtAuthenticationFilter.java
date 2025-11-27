@@ -30,7 +30,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // DEBUG: Sprawdzamy jaki request wchodzi
+        // DEBUG: Requests
         final String authHeader = request.getHeader("Authorization");
         System.out.println("--- JWT FILTER DEBUG ---");
         System.out.println("Request URL: " + request.getRequestURI());
@@ -42,7 +42,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         final String jwt = authHeader.substring(7);
-        System.out.println("Token found: " + jwt.substring(0, 10) + "..."); // Pokaż kawałek tokena
+        System.out.println("Token found: " + jwt.substring(0, 10) + "..."); // Show part of token
 
         try {
             final String userEmail = jwtService.extractUsername(jwt);
@@ -66,7 +66,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception e) {
-            // błędy JWT (np. wygasły token)
+            // JWT errors (expired token)
             System.out.println("BŁĄD WERYFIKACJI TOKENA: " + e.getMessage());
             e.printStackTrace();
         }

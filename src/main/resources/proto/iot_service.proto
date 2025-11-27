@@ -4,23 +4,30 @@ package com.iot.backend.proto;
 option java_package = "com.iot.backend.proto";
 option java_outer_classname = "IotProtos";
 
-message LampConfig {
-  int32 reading_frequency = 1;
-  string operation_mode = 2;
-  double alarm_threshold = 3;
+//message LampConfig {
+//  int32 reading_frequency = 1;
+//  string operation_mode = 2;
+//  double alarm_threshold = 3;
+//}
+
+//message LampStatus {
+//  bool is_on = 1;
+//  double sensor_value = 2;
+//  bool alarm_active = 3;
+//}
+
+message LampCommand {
+  enum Type { ON = 0; OFF = 1; REBOOT = 2; }
+  Type type = 1;
 }
 
 message LampStatus {
   bool is_on = 1;
   double sensor_value = 2;
-  bool alarm_active = 3;
 }
 
-message LampCommand {
-  enum Type {
-    TURN_ON = 0;
-    TURN_OFF = 1;
-    RESET = 2;
-  }
-  Type type = 1;
+message LampConfig {
+  int32 brightness = 1;
+  string color = 2;
+  int32 report_interval = 3;
 }

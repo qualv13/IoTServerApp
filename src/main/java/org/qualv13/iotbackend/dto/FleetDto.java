@@ -7,8 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class LampDto {
-    private String id;
-    private boolean isOn;
-    private Long fleetId;
+public class FleetDto {
+    private Long id;
+    private String name;
 }
