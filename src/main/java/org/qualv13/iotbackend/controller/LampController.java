@@ -1,11 +1,16 @@
 package org.qualv13.iotbackend.controller;
 
 import com.iot.backend.proto.IotProtos;
+import org.qualv13.iotbackend.repository.LampMetricRepository;
 import org.qualv13.iotbackend.service.LampService;
 import org.qualv13.iotbackend.service.MqttService;
+import org.qualv13.iotbackend.entity.LampMetric;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/lamps")
@@ -19,10 +24,7 @@ public class LampController {
     @GetMapping(value = "/{lampId}/status", produces = "application/x-protobuf")
     public IotProtos.LampStatus getStatus(@PathVariable String lampId) {
         // TODO: Download latest known status from database (saved by MQTT Listener)
-        return IotProtos.LampStatus.newBuilder()
-                .setIsOn(true)
-                .setSensorValue(25.5)
-                .build();
+        return lampService.getLampStatus(lampId);
     }
 
     // --- CONFIG (GET/PUT) ---
@@ -52,10 +54,22 @@ public class LampController {
         return ResponseEntity.ok().build();
     }
 
-    // --- METRICS (GET) ---
+//    // --- METRICS (GET) ---
+//    @GetMapping("/{lampId}/metrics")
+//    public ResponseEntity<String> getMetrics(@PathVariable String lampId) {
+//
+//        // TODO: Implement metrics from lamp get
+//        return ResponseEntity.ok("{\"metrics\": []}");
+//    }
+
+    @Autowired
+    private LampMetricRepository metricRepository;
+
     @GetMapping("/{lampId}/metrics")
-    public ResponseEntity<String> getMetrics(@PathVariable String lampId) {
-        // TODO: Implement metrics from lamp get
-        return ResponseEntity.ok("{\"metrics\": []}");
+    public ResponseEntity<List<Double>> getMetrics(@PathVariable String lampId) {
+        // Zwracamy tylko wartości dla uproszczenia (lub stwórz DTO z czasem)
+        List<Double> values = metricRepository.findTop100ByLampIdOrderByTimestampDesc(lampId)
+                .stream().map(LampMetric::getValue).toList();
+        return ResponseEntity.ok(values);
     }
 }

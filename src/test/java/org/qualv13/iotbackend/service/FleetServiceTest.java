@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.qualv13.iotbackend.BaseIntegrationTest;
 import org.qualv13.iotbackend.entity.Fleet;
 import org.qualv13.iotbackend.entity.Lamp;
 import org.qualv13.iotbackend.repository.FleetRepository;
@@ -18,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 @Transactional
-class FleetServiceTest {
+class FleetServiceTest{
 
     @Mock
     private FleetRepository fleetRepository;

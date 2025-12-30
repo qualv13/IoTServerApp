@@ -15,6 +15,7 @@ import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -48,6 +49,22 @@ class UserControllerTest {
     void shouldForbidDeleteWithoutAuth() throws Exception {
         mockMvc.perform(delete("/users/me"))
                 .andExpect(status().isForbidden()); // 403
+    }
+
+    @Autowired private com.fasterxml.jackson.databind.ObjectMapper objectMapper; // Dodaj pole
+
+    @Test
+    void shouldRegisterUser() throws Exception {
+        org.qualv13.iotbackend.dto.RegisterDto dto = new org.qualv13.iotbackend.dto.RegisterDto();
+        dto.setUsername("new_user_reg");
+        dto.setPassword("safe_password");
+
+        mockMvc.perform(post("/users")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk());
+
+        assertTrue(userRepository.findByUsername("new_user_reg").isPresent());
     }
 }
 

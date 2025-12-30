@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/iot_db
+    url: jdbc:postgresql://localhost:5438/iot_db
     username: postgres
     password: password
   jpa:

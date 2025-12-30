@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IoT Control Panel v2.2 (FIXED)</title>
+  <title>IoT Control Panel v3.0 (FULL)</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
@@ -18,6 +18,7 @@
       background: rgba(0,0,0,0.8); z-index: 9999; display: none;
       justify-content: center; align-items: center;
     }
+    .auth-container { max-width: 400px; margin: 80px auto; }
   </style>
 </head>
 <body>
@@ -36,41 +37,99 @@
   </div>
 </nav>
 
-<main class="container py-4" style="max-width: 1100px;">
+<main class="container py-4">
 
-  <div id="login-view" class="row justify-content-center mt-5">
-    <div class="col-md-5">
-      <div class="card p-4 shadow-lg">
-        <h3 class="text-center mb-4"><i class="fas fa-user-shield"></i> Logowanie</h3>
-        <form onsubmit="handleLogin(event)">
-          <div class="mb-3">
-            <input type="text" id="user" class="form-control" placeholder="Użytkownik" required>
-          </div>
-          <div class="mb-3">
-            <input type="password" id="pass" class="form-control" placeholder="Hasło" required>
-          </div>
-          <button class="btn btn-primary w-100 fw-bold">Zaloguj się</button>
-        </form>
-      </div>
+  <div id="login-view" class="auth-container">
+    <div class="card p-4 shadow-lg">
+      <h3 class="text-center mb-4"><i class="fas fa-user-shield"></i> Logowanie</h3>
+      <form onsubmit="handleLogin(event)">
+        <div class="mb-3">
+          <input type="text" id="loginUser" class="form-control" placeholder="Użytkownik" required>
+        </div>
+        <div class="mb-3">
+          <input type="password" id="loginPass" class="form-control" placeholder="Hasło" required>
+        </div>
+        <button class="btn btn-primary w-100 fw-bold mb-3">Zaloguj się</button>
+        <div class="text-center">
+          <a href="#" onclick="showView('register')" class="text-decoration-none small text-info">Nie masz konta? Zarejestruj się</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="register-view" class="auth-container" style="display: none;">
+    <div class="card p-4 shadow-lg border-info">
+      <h3 class="text-center mb-4 text-info"><i class="fas fa-user-plus"></i> Rejestracja</h3>
+      <form onsubmit="handleRegister(event)">
+        <div class="mb-3">
+          <input type="text" id="regUser" class="form-control" placeholder="Wybierz login" required>
+        </div>
+        <div class="mb-3">
+          <input type="password" id="regPass" class="form-control" placeholder="Wybierz hasło" required>
+        </div>
+        <button class="btn btn-info w-100 fw-bold mb-3 text-dark">Utwórz konto</button>
+        <div class="text-center">
+          <a href="#" onclick="showView('login')" class="text-decoration-none small text-light">Masz już konto? Zaloguj się</a>
+        </div>
+      </form>
     </div>
   </div>
 
   <div id="dashboard-view" style="display: none;">
-    <div class="row g-4">
 
-      <div class="col-lg-8">
-        <div class="card mb-4 p-3">
-          <label class="form-label small text-muted">Dodaj nową lampę / Przejmij:</label>
-          <div class="input-group">
-            <span class="input-group-text bg-dark border-secondary"><i class="fas fa-barcode"></i></span>
-            <input type="text" id="newLampId" class="form-control" placeholder="ID Lampy (np. lamp_001)">
-            <button onclick="addLamp()" class="btn btn-success">Dodaj</button>
+    <div class="row g-4 mb-4">
+      <div class="col-md-6">
+        <div class="card h-100">
+          <div class="card-header bg-success text-white bg-opacity-25 fw-bold">
+            <i class="fas fa-tools"></i> Panel Admina: Provisioning
+          </div>
+          <div class="card-body">
+            <p class="small text-muted mb-2">Rejestracja nowego urządzenia w systemie.</p>
+            <div class="input-group">
+              <span class="input-group-text bg-dark border-secondary"><i class="fas fa-barcode"></i></span>
+              <input type="text" id="newLampId" class="form-control" placeholder="ID Lampy (np. lamp_ESP32_01)">
+              <button onclick="addLamp()" class="btn btn-success">Dodaj / Przejmij</button>
+            </div>
+            <small class="text-muted" style="font-size: 0.7rem;">*Jeśli lampa nie istnieje, zostanie utworzona.</small>
           </div>
         </div>
+      </div>
 
-        <h4 class="mb-3 border-bottom pb-2 border-secondary">Twoje Urządzenia</h4>
-        <div id="lamp-grid" class="row row-cols-1 row-cols-md-2 g-3">
+      <div class="col-md-6">
+        <div class="card h-100 border-warning">
+          <div class="card-header bg-warning text-dark bg-opacity-75 fw-bold">
+            <i class="fas fa-microchip"></i> Panel OTA: Aktualizacja Firmware
+          </div>
+          <div class="card-body">
+            <form onsubmit="handleOtaUpload(event)">
+              <div class="input-group mb-2">
+                <input type="file" id="otaFile" class="form-control form-control-sm bg-dark text-light border-secondary" required>
+              </div>
+
+              <div class="row g-2">
+                <div class="col-4">
+                  <select id="otaTargetType" class="form-select form-select-sm bg-dark text-light border-secondary" onchange="toggleOtaTarget()">
+                    <option value="lamp">Lampa</option>
+                    <option value="fleet">Flota</option>
+                  </select>
+                </div>
+                <div class="col-8">
+                  <input type="text" id="otaTargetId" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="ID Lampy" required>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-sm btn-outline-warning w-100 mt-2">
+                <i class="fas fa-cloud-upload-alt"></i> Wyślij Firmware i Uruchom Update
+              </button>
+            </form>
+          </div>
         </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <h4 class="mb-3 border-bottom pb-2 border-secondary">Twoje Urządzenia</h4>
+        <div id="lamp-grid" class="row row-cols-1 row-cols-md-2 g-3"></div>
       </div>
 
       <div class="col-lg-4">
@@ -84,8 +143,7 @@
               <button onclick="createFleet()" class="btn btn-sm btn-light"><i class="fas fa-plus"></i></button>
             </div>
             <h6 class="text-muted small">Twoje grupy:</h6>
-            <ul class="list-group list-group-flush small" id="fleet-list">
-            </ul>
+            <ul class="list-group list-group-flush small" id="fleet-list"></ul>
           </div>
         </div>
 
@@ -98,6 +156,7 @@
       </div>
     </div>
   </div>
+
 </main>
 
 <div class="modal fade" id="controlModal" tabindex="-1">
@@ -108,19 +167,15 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-
         <div class="d-flex justify-content-center gap-3 mb-4">
-          <button onclick="sendProtoCmd('ON')" class="btn btn-lg btn-success px-4"><i class="fas fa-power-off"></i> ON</button>
-          <button onclick="sendProtoCmd('OFF')" class="btn btn-lg btn-danger px-4"><i class="fas fa-power-off"></i> OFF</button>
+          <button onclick="sendProtoCmd('ON')" class="btn btn-lg btn-success px-4">ON</button>
+          <button onclick="sendProtoCmd('OFF')" class="btn btn-lg btn-danger px-4">OFF</button>
         </div>
-
         <hr class="border-secondary">
-
         <div class="mb-3">
           <label class="form-label">Jasność (<span id="briVal">50</span>%)</label>
           <input type="range" id="confBri" class="form-range" min="0" max="100" oninput="document.getElementById('briVal').innerText=this.value">
         </div>
-
         <div class="row mb-3">
           <div class="col-6">
             <label class="form-label">Kolor</label>
@@ -131,10 +186,7 @@
             <input type="number" id="confInt" class="form-control bg-secondary text-white border-0" value="60">
           </div>
         </div>
-
-        <button onclick="sendProtoConfig()" class="btn btn-primary w-100 mt-2">
-          <i class="fas fa-save"></i> Wyślij Konfigurację (Protobuf)
-        </button>
+        <button onclick="sendProtoConfig()" class="btn btn-primary w-100 mt-2">Wyślij Config</button>
       </div>
     </div>
   </div>
@@ -149,33 +201,63 @@
   let myFleets = [];
   let currentLamp = null;
 
-  // --- PROTOBUF DEFINITION ---
+  // --- 1. DYNAMICZNE ŁADOWANIE PROTOBUF Z SERWERA ---
   let LampCommand, LampConfig;
-  const protoDef = `
-    syntax = "proto3"; package com.iot;
-    message LampCommand { enum Type { ON=0; OFF=1; } Type type=1; }
-    message LampConfig { int32 brightness=1; string color=2; int32 report_interval=3; }
-    `;
-  (function(){
+
+  async function loadProtoDef() {
     try {
+      // Pobieramy definicję .proto z nowego endpointu (jeśli go dodałeś)
+      // Jeśli nie, używamy fallbacku stringowego
+      let protoDef = `
+        syntax = "proto3"; package com.iot.backend.proto;
+        message LampCommand { enum Type { ON=0; OFF=1; REBOOT=2; OTA_UPDATE=3; } Type type=1; string ota_url=2; }
+        message LampConfig { int32 brightness=1; string color=2; int32 report_interval=3; }
+        message LampStatus { bool is_on=1; double sensor_value=2; string firmware_version=3; }
+      `;
+
+      // Opcjonalnie: odkomentuj, jeśli wdrożyłeś endpoint w Javie
+      // const res = await fetch(\`\${API}/proto-definition\`);
+      // if(res.ok) protoDef = await res.text();
+
       const root = protobuf.parse(protoDef).root;
-      LampCommand = root.lookupType("com.iot.LampCommand");
-      LampConfig = root.lookupType("com.iot.LampConfig");
+      // UWAGA: Pakiet musi zgadzać się z plikiem .proto!
+      LampCommand = root.lookupType("com.iot.backend.proto.LampCommand");
+      LampConfig = root.lookupType("com.iot.backend.proto.LampConfig");
     } catch(e) { console.error("Protobuf init error", e); }
+  }
+
+  (async function(){
+    await loadProtoDef();
+    if(token) init();
+    else showView('login');
   })();
 
-  if(token) init();
+  // --- ZARZĄDZANIE WIDOKAMI ---
+  function showView(viewName) {
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('register-view').style.display = 'none';
+    document.getElementById('dashboard-view').style.display = 'none';
+    document.getElementById('navbar').style.display = 'none';
 
-  // --- LOGIKA AUTH ---
+    if(viewName === 'login') document.getElementById('login-view').style.display = 'block';
+    if(viewName === 'register') document.getElementById('register-view').style.display = 'block';
+    if(viewName === 'dashboard') {
+      document.getElementById('dashboard-view').style.display = 'block';
+      document.getElementById('navbar').style.display = 'block';
+    }
+  }
+
+  // --- LOGIKA AUTH & REGISTER ---
   async function handleLogin(e) {
     e.preventDefault();
     loading(true);
+    const u = document.getElementById('loginUser').value;
+    const p = document.getElementById('loginPass').value;
     try {
-      const u = document.getElementById('user').value;
       const res = await fetch(`${API}/auth/login`, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({username: u, password: document.getElementById('pass').value})
+        body: JSON.stringify({username: u, password: p})
       });
       if(!res.ok) throw new Error();
       const data = await res.json();
@@ -187,234 +269,202 @@
     loading(false);
   }
 
+  // NOWE: Rejestracja
+  async function handleRegister(e) {
+    e.preventDefault();
+    loading(true);
+    const u = document.getElementById('regUser').value;
+    const p = document.getElementById('regPass').value;
+    try {
+      // Endpoint z UserController
+      const res = await fetch(`${API}/users`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({username: u, password: p})
+      });
+
+      if(res.ok) {
+        alert("Konto utworzone! Możesz się zalogować.");
+        showView('login');
+      } else {
+        const txt = await res.text();
+        alert("Błąd rejestracji: " + txt);
+      }
+    } catch(e) { alert('Błąd połączenia'); }
+    loading(false);
+  }
+
   function init() {
-    document.getElementById('login-view').style.display = 'none';
-    document.getElementById('dashboard-view').style.display = 'block';
-    document.getElementById('navbar').style.display = 'block';
+    showView('dashboard');
     document.getElementById('nav-username').innerText = localStorage.getItem('user');
     refreshAll();
   }
 
-  async function refreshAll() {
-    await loadFleets();
-    await loadLamps();
+  // --- LOGIKA OTA (NOWE) ---
+  function toggleOtaTarget() {
+    const type = document.getElementById('otaTargetType').value;
+    document.getElementById('otaTargetId').placeholder = (type === 'lamp') ? 'ID Lampy' : 'ID Floty';
   }
 
-  // --- LOGIKA FLOT ---
-  async function loadFleets() {
+  async function handleOtaUpload(e) {
+    e.preventDefault();
+    if(!confirm("Czy na pewno chcesz wysłać firmware? To zresetuje urządzenia.")) return;
+
+    loading(true);
+    const fileInput = document.getElementById('otaFile');
+    const targetType = document.getElementById('otaTargetType').value;
+    const targetId = document.getElementById('otaTargetId').value;
+
+    if(fileInput.files.length === 0) { alert("Wybierz plik!"); loading(false); return; }
+
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    // Budowanie URL: /ota/upload?lampId=... lub ?fleetId=...
+    let url = `${API}/ota/upload?`;
+    if(targetType === 'lamp') url += `lampId=${targetId}`;
+    else url += `fleetId=${targetId}`;
+
     try {
-      const res = await authFetch(`${API}/fleets`);
-      if(!res) return;
-      myFleets = await res.json();
-
-      const list = document.getElementById('fleet-list');
-      list.innerHTML = '';
-      myFleets.forEach(f => {
-        list.innerHTML += `
-                    <li class="list-group-item bg-dark text-white border-secondary d-flex justify-content-between align-items-center py-1">
-                        <span>${f.name}</span>
-                        <span class="badge bg-secondary" style="font-size: 0.6em">ID: ${f.id}</span>
-                    </li>`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+          // NIE ustawiamy Content-Type przy FormData! Przeglądarka sama ustawi boundary.
+        },
+        body: formData
       });
-    } catch(e) { console.log('Błąd ładowania flot'); }
-  }
 
-  async function createFleet() {
-    const name = document.getElementById('newFleetName').value;
-    if(!name) return;
-    await authFetch(`${API}/fleets`, { method: 'POST', body: JSON.stringify({name}) });
-    document.getElementById('newFleetName').value = '';
-    refreshAll();
-  }
+      const text = await res.text();
+      if(res.ok) alert("Sukces: " + text);
+      else alert("Błąd OTA: " + text);
 
-  async function assignToFleet(lampId) {
-    // Pobieramy wartość z selecta dedykowanego dla tej konkretnej lampy
-    const selectEl = document.getElementById(`sel-${lampId}`);
-    const fleetId = selectEl.value;
-
-    if(!fleetId) {
-      alert("Wybierz flotę z listy!");
-      return;
+    } catch(e) {
+      console.error(e);
+      alert("Błąd połączenia podczas OTA");
     }
-
-    console.log(`Przypisywanie lampy ${lampId} do floty ${fleetId}`);
-    const res = await authFetch(`${API}/fleets/${fleetId}/lamps/${lampId}`, { method: 'POST' });
-
-    if(res) {
-      // Sukces - odświeżamy widok, żeby pokazał się przycisk "Odłącz"
-      await loadLamps();
-    }
+    loading(false);
   }
 
-  async function removeFromFleet(fleetId, lampId) {
-    if(!confirm(`Odpiąć lampę od floty?`)) return;
-    await authFetch(`${API}/fleets/${fleetId}/lamps/${lampId}`, { method: 'DELETE' });
-    loadLamps();
+  // --- LOGIKA DANYCH (LAMPY I FLOTY) ---
+  async function refreshAll() { await loadFleets(); await loadLamps(); }
+
+  async function loadFleets() {
+    const res = await authFetch(`${API}/fleets`);
+    if(!res) return;
+    myFleets = await res.json();
+    const list = document.getElementById('fleet-list');
+    list.innerHTML = '';
+    myFleets.forEach(f => {
+      list.innerHTML += `<li class="list-group-item bg-dark text-white border-secondary d-flex justify-content-between"><span>${f.name}</span> <span class="badge bg-secondary">ID: ${f.id}</span></li>`;
+    });
   }
 
-  // --- LOGIKA LAMP ---
   async function loadLamps() {
     const res = await authFetch(`${API}/users/me/lamps`);
     if(!res) return;
     const lamps = await res.json();
-
     const grid = document.getElementById('lamp-grid');
     grid.innerHTML = '';
 
     lamps.forEach(lamp => {
-      // Sprawdzamy czy lampa jest w jakiejś flocie
-      const currentFleetId = lamp.fleetId;
-
-      // Budujemy opcje do selecta
       let optionsHtml = '<option value="" disabled selected>- Wybierz -</option>';
-      myFleets.forEach(f => {
-        // Jeśli lampa jest w tej flocie, nie zaznaczamy jej w select, bo select służy do zmiany/przypisania
-        // Ale można dodać logikę wyświetlania aktualnej
-        optionsHtml += `<option value="${f.id}">${f.name}</option>`;
-      });
+      myFleets.forEach(f => { optionsHtml += `<option value="${f.id}">${f.name}</option>`; });
 
-      // Sekcja zarządzania flotą
-      let fleetSection = '';
-
-      if (currentFleetId) {
-        // Znajdź nazwę floty
-        const fleetObj = myFleets.find(f => f.id === currentFleetId);
-        const fleetName = fleetObj ? fleetObj.name : `ID: ${currentFleetId}`;
-
-        fleetSection = `
-                    <div class="alert alert-dark border-secondary p-2 mb-2 d-flex justify-content-between align-items-center">
-                        <small class="text-info"><i class="fas fa-link"></i> ${fleetName}</small>
-                        <button onclick="removeFromFleet(${currentFleetId}, '${lamp.id}')" class="btn btn-xs btn-outline-warning" style="font-size:0.7rem">Odłącz</button>
-                    </div>
-                `;
-      } else {
-        fleetSection = `
-                    <div class="input-group input-group-sm mb-2">
-                        <select id="sel-${lamp.id}" class="form-select bg-dark text-white border-secondary">
-                            ${optionsHtml}
-                        </select>
-                        <button onclick="assignToFleet('${lamp.id}')" class="btn btn-outline-secondary" title="Zapisz"><i class="fas fa-save"></i></button>
-                    </div>
-                `;
-      }
+      let fleetSec = lamp.fleetId
+              ? `<div class="alert alert-dark border-secondary p-2 mb-2 d-flex justify-content-between"><small class="text-info">Flota ID: ${lamp.fleetId}</small><button onclick="removeFromFleet(${lamp.fleetId}, '${lamp.id}')" class="btn btn-xs btn-outline-warning" style="font-size:0.7rem">Odłącz</button></div>`
+              : `<div class="input-group input-group-sm mb-2"><select id="sel-${lamp.id}" class="form-select bg-dark text-white border-secondary">${optionsHtml}</select><button onclick="assignToFleet('${lamp.id}')" class="btn btn-outline-secondary"><i class="fas fa-save"></i></button></div>`;
 
       grid.innerHTML += `
-            <div class="col">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="card-title m-0 text-truncate" title="${lamp.id}">${lamp.id}</h5>
-                            <span class="status-dot ${lamp.on ? 'status-on':'status-off'}"></span>
-                        </div>
-
-                        ${fleetSection}
-
-                        <div class="d-grid gap-2 d-flex">
-                            <button onclick="openModal('${lamp.id}')" class="btn btn-sm btn-primary flex-grow-1"><i class="fas fa-sliders-h"></i> Steruj</button>
-                            <button onclick="delLamp('${lamp.id}')" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
+        <div class="col"><div class="card h-100"><div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="card-title m-0 text-truncate" title="${lamp.id}">${lamp.id}</h5>
+                <span class="status-dot ${lamp.on ? 'status-on':'status-off'}"></span>
+            </div>
+            ${fleetSec}
+            <div class="d-grid gap-2 d-flex">
+                <button onclick="openModal('${lamp.id}')" class="btn btn-sm btn-primary flex-grow-1">Steruj</button>
+                <button onclick="delLamp('${lamp.id}')" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+            </div>
+        </div></div></div>`;
     });
+  }
+
+  // --- AKCJE CRUD ---
+  async function createFleet() {
+    const name = document.getElementById('newFleetName').value;
+    if(!name) return;
+    await authFetch(`${API}/fleets`, { method: 'POST', body: JSON.stringify({name}) });
+    document.getElementById('newFleetName').value=''; refreshAll();
   }
 
   async function addLamp() {
     const id = document.getElementById('newLampId').value;
     if(!id) return;
     await authFetch(`${API}/users/me/lamps`, { method:'POST', body: JSON.stringify({lampId: id}) });
-    document.getElementById('newLampId').value='';
+    document.getElementById('newLampId').value=''; loadLamps();
+  }
+
+  async function delLamp(id) { if(confirm('Usunąć?')) { await authFetch(`${API}/users/me/lamps/${id}`, {method:'DELETE'}); loadLamps(); } }
+
+  async function assignToFleet(lampId) {
+    const fleetId = document.getElementById(`sel-${lampId}`).value;
+    if(!fleetId) return alert("Wybierz flotę");
+    await authFetch(`${API}/fleets/${fleetId}/lamps/${lampId}`, { method: 'POST' });
     loadLamps();
   }
 
-  async function delLamp(id) {
-    if(confirm('Usunąć lampę z konta?')) await authFetch(`${API}/users/me/lamps/${id}`, {method:'DELETE'});
-    loadLamps();
+  async function removeFromFleet(fleetId, lampId) {
+    if(confirm('Odpiąć?')) { await authFetch(`${API}/fleets/${fleetId}/lamps/${lampId}`, { method: 'DELETE' }); loadLamps(); }
   }
 
-  // --- PROTOBUF SEND ---
-  // function openModal(id) {
-  //   currentLamp = id;
-  //   document.getElementById('modalTitle').innerText = `Sterowanie: ${id}`;
-  //   new bootstrap.Modal(document.getElementById('controlModal')).show();
-  // }
+  // --- PROTOBUF CONTROL ---
   async function openModal(id) {
     currentLamp = id;
     document.getElementById('modalTitle').innerText = `Sterowanie: ${id}`;
-
-    // --- NOWOŚĆ: Pobieranie aktualnej konfiguracji z backendu ---
+    // Pobranie configu
     try {
-      const res = await fetch(`${API}/lamps/${id}/config`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          // Nie ustawiamy Content-Type na json, bo spodziewamy się binarki
-        }
-      });
-
-      if (res.ok) {
-        // 1. Pobierz dane jako ArrayBuffer
+      const res = await fetch(`${API}/lamps/${id}/config`, { headers: { 'Authorization': `Bearer ${token}` }});
+      if(res.ok) {
         const buffer = await res.arrayBuffer();
-
-        // 2. Zdekoduj używając Protobuf.js
         const decoded = LampConfig.decode(new Uint8Array(buffer));
-
-        // 3. Ustaw wartości w formularzu
         document.getElementById('confBri').value = decoded.brightness;
-        document.getElementById('briVal').innerText = decoded.brightness; // tekst obok suwaka
+        document.getElementById('briVal').innerText = decoded.brightness;
         document.getElementById('confCol').value = decoded.color || "#ffffff";
         document.getElementById('confInt').value = decoded.report_interval;
       }
-    } catch (e) {
-      console.error("Nie udało się pobrać configu", e);
-    }
-    // -----------------------------------------------------------
-
+    } catch(e) {}
     new bootstrap.Modal(document.getElementById('controlModal')).show();
   }
 
-  // async function sendProtoCmd(type) {
-  //   const payload = { type: (type==='ON'?0:1) };
-  //   const buf = LampCommand.encode(LampCommand.create(payload)).finish();
-  //   await sendBin(`${API}/lamps/${currentLamp}/command`, buf);
-  //   alert('Komenda wysłana');
-  // }
-  async function sendProtoCmd(type) {
-    const payload = { type: (type==='ON'?0:1) };
+  async function sendProtoCmd(typeStr) {
+    // Enum map: ON=0, OFF=1
+    const typeVal = (typeStr==='ON') ? 0 : 1;
+    const payload = { type: typeVal };
     const buf = LampCommand.encode(LampCommand.create(payload)).finish();
-
     await sendBin(`${API}/lamps/${currentLamp}/command`, buf);
-
-    // --- DODAJ TĘ LINIĘ ---
-    await loadLamps(); // Odśwież listę, żeby zaktualizować status-dot (kropkę)
-    // ----------------------
-
-    alert('Komenda wysłana'); // Opcjonalnie usuń alert, bo jest denerwujący przy częstym klikaniu
+    await loadLamps(); // Odśwież status
   }
 
   async function sendProtoConfig() {
-    const bri = parseInt(document.getElementById('confBri').value);
-    const col = document.getElementById('confCol').value;
-    const interval = parseInt(document.getElementById('confInt').value);
-
-    const payload = { brightness: bri, color: col, report_interval: interval };
+    const payload = {
+      brightness: parseInt(document.getElementById('confBri').value),
+      color: document.getElementById('confCol').value,
+      report_interval: parseInt(document.getElementById('confInt').value)
+    };
     const buf = LampConfig.encode(LampConfig.create(payload)).finish();
-
     await sendBin(`${API}/lamps/${currentLamp}/config`, buf, 'PUT');
     alert('Konfiguracja wysłana');
   }
 
-  // --- HELPERY ---
+  // --- UTILS ---
   async function authFetch(url, opts={}) {
     opts.headers = opts.headers || {};
     opts.headers['Authorization'] = `Bearer ${token}`;
     if(opts.body && !opts.headers['Content-Type']) opts.headers['Content-Type']='application/json';
-
     const res = await fetch(url, opts);
     if(res.status===403 || res.status===401) { logout(); return null; }
-    if(!res.ok) { alert('Błąd zapytania: ' + res.status); return null; }
-
-    // Obsługa braku body (np. DELETE)
-    try { return await res; } catch(e) { return null; }
+    return res;
   }
 
   async function sendBin(url, body, method='POST') {
@@ -423,7 +473,7 @@
       headers: {'Authorization':`Bearer ${token}`, 'Content-Type':'application/x-protobuf'},
       body: body
     });
-    if(!res.ok) alert('Błąd wysyłania Protobuf');
+    if(!res.ok) alert('Błąd wysyłania komendy');
   }
 
   function logout() { localStorage.removeItem('jwt'); location.reload(); }
@@ -432,3 +482,457 @@
 </script>
 </body>
 </html>
+
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="pl" data-bs-theme="dark">-->
+<!--<head>-->
+<!--  <meta charset="UTF-8">-->
+<!--  <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--  <title>IoT Control Panel v2.2 (FIXED)</title>-->
+<!--  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">-->
+<!--  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">-->
+
+<!--  <style>-->
+<!--    body { background-color: #212529; color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }-->
+<!--    .card { background-color: #2b3035; border: 1px solid #495057; }-->
+<!--    .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }-->
+<!--    .status-on { background-color: #2ecc71; box-shadow: 0 0 8px #2ecc71; }-->
+<!--    .status-off { background-color: #e74c3c; }-->
+<!--    #loader {-->
+<!--      position: fixed; top: 0; left: 0; width: 100%; height: 100%;-->
+<!--      background: rgba(0,0,0,0.8); z-index: 9999; display: none;-->
+<!--      justify-content: center; align-items: center;-->
+<!--    }-->
+<!--  </style>-->
+<!--</head>-->
+<!--<body>-->
+
+<!--<div id="loader">-->
+<!--  <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>-->
+<!--</div>-->
+
+<!--<nav id="navbar" class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom border-secondary mb-4" style="display: none;">-->
+<!--  <div class="container">-->
+<!--    <span class="navbar-brand"><i class="fas fa-network-wired text-primary"></i> IoT Manager</span>-->
+<!--    <div class="d-flex align-items-center">-->
+<!--      <span id="nav-username" class="me-3 text-muted small">User</span>-->
+<!--      <button onclick="logout()" class="btn btn-outline-danger btn-sm"><i class="fas fa-power-off"></i></button>-->
+<!--    </div>-->
+<!--  </div>-->
+<!--</nav>-->
+
+<!--<main class="container py-4" style="max-width: 1100px;">-->
+
+<!--  <div id="login-view" class="row justify-content-center mt-5">-->
+<!--    <div class="col-md-5">-->
+<!--      <div class="card p-4 shadow-lg">-->
+<!--        <h3 class="text-center mb-4"><i class="fas fa-user-shield"></i> Logowanie</h3>-->
+<!--        <form onsubmit="handleLogin(event)">-->
+<!--          <div class="mb-3">-->
+<!--            <input type="text" id="user" class="form-control" placeholder="Użytkownik" required>-->
+<!--          </div>-->
+<!--          <div class="mb-3">-->
+<!--            <input type="password" id="pass" class="form-control" placeholder="Hasło" required>-->
+<!--          </div>-->
+<!--          <button class="btn btn-primary w-100 fw-bold">Zaloguj się</button>-->
+<!--        </form>-->
+<!--      </div>-->
+<!--    </div>-->
+<!--  </div>-->
+
+<!--  <div id="dashboard-view" style="display: none;">-->
+<!--    <div class="row g-4">-->
+
+<!--      <div class="col-lg-8">-->
+<!--        <div class="card mb-4 p-3">-->
+<!--          <label class="form-label small text-muted">Dodaj nową lampę / Przejmij:</label>-->
+<!--          <div class="input-group">-->
+<!--            <span class="input-group-text bg-dark border-secondary"><i class="fas fa-barcode"></i></span>-->
+<!--            <input type="text" id="newLampId" class="form-control" placeholder="ID Lampy (np. lamp_001)">-->
+<!--            <button onclick="addLamp()" class="btn btn-success">Dodaj</button>-->
+<!--          </div>-->
+<!--        </div>-->
+
+<!--        <h4 class="mb-3 border-bottom pb-2 border-secondary">Twoje Urządzenia</h4>-->
+<!--        <div id="lamp-grid" class="row row-cols-1 row-cols-md-2 g-3">-->
+<!--        </div>-->
+<!--      </div>-->
+
+<!--      <div class="col-lg-4">-->
+<!--        <div class="card mb-4">-->
+<!--          <div class="card-header bg-primary text-white fw-bold">-->
+<!--            <i class="fas fa-layer-group"></i> Floty-->
+<!--          </div>-->
+<!--          <div class="card-body">-->
+<!--            <div class="input-group mb-3">-->
+<!--              <input type="text" id="newFleetName" class="form-control form-control-sm" placeholder="Nowa nazwa floty">-->
+<!--              <button onclick="createFleet()" class="btn btn-sm btn-light"><i class="fas fa-plus"></i></button>-->
+<!--            </div>-->
+<!--            <h6 class="text-muted small">Twoje grupy:</h6>-->
+<!--            <ul class="list-group list-group-flush small" id="fleet-list">-->
+<!--            </ul>-->
+<!--          </div>-->
+<!--        </div>-->
+
+<!--        <div class="card border-danger">-->
+<!--          <div class="card-header border-danger text-danger bg-transparent small fw-bold">Strefa Niebezpieczna</div>-->
+<!--          <div class="card-body">-->
+<!--            <button onclick="deleteAccount()" class="btn btn-sm btn-outline-danger w-100">Usuń Konto</button>-->
+<!--          </div>-->
+<!--        </div>-->
+<!--      </div>-->
+<!--    </div>-->
+<!--  </div>-->
+<!--</main>-->
+
+<!--<div class="modal fade" id="controlModal" tabindex="-1">-->
+<!--  <div class="modal-dialog">-->
+<!--    <div class="modal-content bg-dark text-white border-secondary">-->
+<!--      <div class="modal-header border-secondary">-->
+<!--        <h5 class="modal-title" id="modalTitle">Konfiguracja</h5>-->
+<!--        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>-->
+<!--      </div>-->
+<!--      <div class="modal-body">-->
+
+<!--        <div class="d-flex justify-content-center gap-3 mb-4">-->
+<!--          <button onclick="sendProtoCmd('ON')" class="btn btn-lg btn-success px-4"><i class="fas fa-power-off"></i> ON</button>-->
+<!--          <button onclick="sendProtoCmd('OFF')" class="btn btn-lg btn-danger px-4"><i class="fas fa-power-off"></i> OFF</button>-->
+<!--        </div>-->
+
+<!--        <hr class="border-secondary">-->
+
+<!--        <div class="mb-3">-->
+<!--          <label class="form-label">Jasność (<span id="briVal">50</span>%)</label>-->
+<!--          <input type="range" id="confBri" class="form-range" min="0" max="100" oninput="document.getElementById('briVal').innerText=this.value">-->
+<!--        </div>-->
+
+<!--        <div class="row mb-3">-->
+<!--          <div class="col-6">-->
+<!--            <label class="form-label">Kolor</label>-->
+<!--            <input type="color" id="confCol" class="form-control form-control-color w-100 bg-secondary border-0" value="#ffffff">-->
+<!--          </div>-->
+<!--          <div class="col-6">-->
+<!--            <label class="form-label">Raport (sek)</label>-->
+<!--            <input type="number" id="confInt" class="form-control bg-secondary text-white border-0" value="60">-->
+<!--          </div>-->
+<!--        </div>-->
+
+<!--        <button onclick="sendProtoConfig()" class="btn btn-primary w-100 mt-2">-->
+<!--          <i class="fas fa-save"></i> Wyślij Konfigurację (Protobuf)-->
+<!--        </button>-->
+<!--      </div>-->
+<!--    </div>-->
+<!--  </div>-->
+<!--</div>-->
+
+<!--<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>-->
+<!--<script src="https://cdn.jsdelivr.net/npm/protobufjs@7.2.4/dist/protobuf.min.js"></script>-->
+
+<!--<script>-->
+<!--  const API = 'http://localhost:8080';-->
+<!--  let token = localStorage.getItem('jwt');-->
+<!--  let myFleets = [];-->
+<!--  let currentLamp = null;-->
+
+<!--  // -&#45;&#45; PROTOBUF DEFINITION -&#45;&#45;-->
+<!--  // let LampCommand, LampConfig;-->
+<!--  // const protoDef = `-->
+<!--  //   syntax = "proto3"; package com.iot;-->
+<!--  //   message LampCommand { enum Type { ON=0; OFF=1; } Type type=1; }-->
+<!--  //   message LampConfig { int32 brightness=1; string color=2; int32 report_interval=3; }-->
+<!--  //   `;-->
+<!--  // (function(){-->
+<!--  //   try {-->
+<!--  //     const root = protobuf.parse(protoDef).root;-->
+<!--  //     LampCommand = root.lookupType("com.iot.LampCommand");-->
+<!--  //     LampConfig = root.lookupType("com.iot.LampConfig");-->
+<!--  //   } catch(e) { console.error("Protobuf init error", e); }-->
+<!--  // })();-->
+<!--  //-->
+<!--  // if(token) init();-->
+
+<!--  let protoDef = "";-->
+
+<!--  async function loadProtoDef() {-->
+<!--    const res = await fetch(`${API}/proto-definition`); // Bez autoryzacji jeśli endpoint jest publiczny-->
+<!--    protoDef = await res.text();-->
+
+<!--    // Inicjalizacja protobuf-->
+<!--    const root = protobuf.parse(protoDef).root;-->
+<!--    LampCommand = root.lookupType("com.iot.backend.proto.LampCommand"); // Uwaga na package w proto!-->
+<!--    LampConfig = root.lookupType("com.iot.backend.proto.LampConfig");-->
+<!--  }-->
+
+<!--  // Wywołaj to na starcie-->
+<!--  (async function(){-->
+<!--    await loadProtoDef();-->
+<!--    if(token) init();-->
+<!--  })();-->
+
+<!--  // -&#45;&#45; LOGIKA AUTH -&#45;&#45;-->
+<!--  async function handleLogin(e) {-->
+<!--    e.preventDefault();-->
+<!--    loading(true);-->
+<!--    try {-->
+<!--      const u = document.getElementById('user').value;-->
+<!--      const res = await fetch(`${API}/auth/login`, {-->
+<!--        method:'POST',-->
+<!--        headers:{'Content-Type':'application/json'},-->
+<!--        body: JSON.stringify({username: u, password: document.getElementById('pass').value})-->
+<!--      });-->
+<!--      if(!res.ok) throw new Error();-->
+<!--      const data = await res.json();-->
+<!--      token = data.accessToken;-->
+<!--      localStorage.setItem('jwt', token);-->
+<!--      localStorage.setItem('user', u);-->
+<!--      init();-->
+<!--    } catch(e) { alert('Błąd logowania'); }-->
+<!--    loading(false);-->
+<!--  }-->
+
+<!--  function init() {-->
+<!--    document.getElementById('login-view').style.display = 'none';-->
+<!--    document.getElementById('dashboard-view').style.display = 'block';-->
+<!--    document.getElementById('navbar').style.display = 'block';-->
+<!--    document.getElementById('nav-username').innerText = localStorage.getItem('user');-->
+<!--    refreshAll();-->
+<!--  }-->
+
+<!--  async function refreshAll() {-->
+<!--    await loadFleets();-->
+<!--    await loadLamps();-->
+<!--  }-->
+
+<!--  // -&#45;&#45; LOGIKA FLOT -&#45;&#45;-->
+<!--  async function loadFleets() {-->
+<!--    try {-->
+<!--      const res = await authFetch(`${API}/fleets`);-->
+<!--      if(!res) return;-->
+<!--      myFleets = await res.json();-->
+
+<!--      const list = document.getElementById('fleet-list');-->
+<!--      list.innerHTML = '';-->
+<!--      myFleets.forEach(f => {-->
+<!--        list.innerHTML += `-->
+<!--                    <li class="list-group-item bg-dark text-white border-secondary d-flex justify-content-between align-items-center py-1">-->
+<!--                        <span>${f.name}</span>-->
+<!--                        <span class="badge bg-secondary" style="font-size: 0.6em">ID: ${f.id}</span>-->
+<!--                    </li>`;-->
+<!--      });-->
+<!--    } catch(e) { console.log('Błąd ładowania flot'); }-->
+<!--  }-->
+
+<!--  async function createFleet() {-->
+<!--    const name = document.getElementById('newFleetName').value;-->
+<!--    if(!name) return;-->
+<!--    await authFetch(`${API}/fleets`, { method: 'POST', body: JSON.stringify({name}) });-->
+<!--    document.getElementById('newFleetName').value = '';-->
+<!--    refreshAll();-->
+<!--  }-->
+
+<!--  async function assignToFleet(lampId) {-->
+<!--    // Pobieramy wartość z selecta dedykowanego dla tej konkretnej lampy-->
+<!--    const selectEl = document.getElementById(`sel-${lampId}`);-->
+<!--    const fleetId = selectEl.value;-->
+
+<!--    if(!fleetId) {-->
+<!--      alert("Wybierz flotę z listy!");-->
+<!--      return;-->
+<!--    }-->
+
+<!--    console.log(`Przypisywanie lampy ${lampId} do floty ${fleetId}`);-->
+<!--    const res = await authFetch(`${API}/fleets/${fleetId}/lamps/${lampId}`, { method: 'POST' });-->
+
+<!--    if(res) {-->
+<!--      // Sukces - odświeżamy widok, żeby pokazał się przycisk "Odłącz"-->
+<!--      await loadLamps();-->
+<!--    }-->
+<!--  }-->
+
+<!--  async function removeFromFleet(fleetId, lampId) {-->
+<!--    if(!confirm(`Odpiąć lampę od floty?`)) return;-->
+<!--    await authFetch(`${API}/fleets/${fleetId}/lamps/${lampId}`, { method: 'DELETE' });-->
+<!--    loadLamps();-->
+<!--  }-->
+
+<!--  // -&#45;&#45; LOGIKA LAMP -&#45;&#45;-->
+<!--  async function loadLamps() {-->
+<!--    const res = await authFetch(`${API}/users/me/lamps`);-->
+<!--    if(!res) return;-->
+<!--    const lamps = await res.json();-->
+
+<!--    const grid = document.getElementById('lamp-grid');-->
+<!--    grid.innerHTML = '';-->
+
+<!--    lamps.forEach(lamp => {-->
+<!--      // Sprawdzamy czy lampa jest w jakiejś flocie-->
+<!--      const currentFleetId = lamp.fleetId;-->
+
+<!--      // Budujemy opcje do selecta-->
+<!--      let optionsHtml = '<option value="" disabled selected>- Wybierz -</option>';-->
+<!--      myFleets.forEach(f => {-->
+<!--        // Jeśli lampa jest w tej flocie, nie zaznaczamy jej w select, bo select służy do zmiany/przypisania-->
+<!--        // Ale można dodać logikę wyświetlania aktualnej-->
+<!--        optionsHtml += `<option value="${f.id}">${f.name}</option>`;-->
+<!--      });-->
+
+<!--      // Sekcja zarządzania flotą-->
+<!--      let fleetSection = '';-->
+
+<!--      if (currentFleetId) {-->
+<!--        // Znajdź nazwę floty-->
+<!--        const fleetObj = myFleets.find(f => f.id === currentFleetId);-->
+<!--        const fleetName = fleetObj ? fleetObj.name : `ID: ${currentFleetId}`;-->
+
+<!--        fleetSection = `-->
+<!--                    <div class="alert alert-dark border-secondary p-2 mb-2 d-flex justify-content-between align-items-center">-->
+<!--                        <small class="text-info"><i class="fas fa-link"></i> ${fleetName}</small>-->
+<!--                        <button onclick="removeFromFleet(${currentFleetId}, '${lamp.id}')" class="btn btn-xs btn-outline-warning" style="font-size:0.7rem">Odłącz</button>-->
+<!--                    </div>-->
+<!--                `;-->
+<!--      } else {-->
+<!--        fleetSection = `-->
+<!--                    <div class="input-group input-group-sm mb-2">-->
+<!--                        <select id="sel-${lamp.id}" class="form-select bg-dark text-white border-secondary">-->
+<!--                            ${optionsHtml}-->
+<!--                        </select>-->
+<!--                        <button onclick="assignToFleet('${lamp.id}')" class="btn btn-outline-secondary" title="Zapisz"><i class="fas fa-save"></i></button>-->
+<!--                    </div>-->
+<!--                `;-->
+<!--      }-->
+
+<!--      grid.innerHTML += `-->
+<!--            <div class="col">-->
+<!--                <div class="card h-100">-->
+<!--                    <div class="card-body">-->
+<!--                        <div class="d-flex justify-content-between align-items-center mb-3">-->
+<!--                            <h5 class="card-title m-0 text-truncate" title="${lamp.id}">${lamp.id}</h5>-->
+<!--                            <span class="status-dot ${lamp.on ? 'status-on':'status-off'}"></span>-->
+<!--                        </div>-->
+
+<!--                        ${fleetSection}-->
+
+<!--                        <div class="d-grid gap-2 d-flex">-->
+<!--                            <button onclick="openModal('${lamp.id}')" class="btn btn-sm btn-primary flex-grow-1"><i class="fas fa-sliders-h"></i> Steruj</button>-->
+<!--                            <button onclick="delLamp('${lamp.id}')" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>`;-->
+<!--    });-->
+<!--  }-->
+
+<!--  async function addLamp() {-->
+<!--    const id = document.getElementById('newLampId').value;-->
+<!--    if(!id) return;-->
+<!--    await authFetch(`${API}/users/me/lamps`, { method:'POST', body: JSON.stringify({lampId: id}) });-->
+<!--    document.getElementById('newLampId').value='';-->
+<!--    loadLamps();-->
+<!--  }-->
+
+<!--  async function delLamp(id) {-->
+<!--    if(confirm('Usunąć lampę z konta?')) await authFetch(`${API}/users/me/lamps/${id}`, {method:'DELETE'});-->
+<!--    loadLamps();-->
+<!--  }-->
+
+<!--  // -&#45;&#45; PROTOBUF SEND -&#45;&#45;-->
+<!--  // function openModal(id) {-->
+<!--  //   currentLamp = id;-->
+<!--  //   document.getElementById('modalTitle').innerText = `Sterowanie: ${id}`;-->
+<!--  //   new bootstrap.Modal(document.getElementById('controlModal')).show();-->
+<!--  // }-->
+<!--  async function openModal(id) {-->
+<!--    currentLamp = id;-->
+<!--    document.getElementById('modalTitle').innerText = `Sterowanie: ${id}`;-->
+
+<!--    // -&#45;&#45; NOWOŚĆ: Pobieranie aktualnej konfiguracji z backendu -&#45;&#45;-->
+<!--    try {-->
+<!--      const res = await fetch(`${API}/lamps/${id}/config`, {-->
+<!--        headers: {-->
+<!--          'Authorization': `Bearer ${token}`,-->
+<!--          // Nie ustawiamy Content-Type na json, bo spodziewamy się binarki-->
+<!--        }-->
+<!--      });-->
+
+<!--      if (res.ok) {-->
+<!--        // 1. Pobierz dane jako ArrayBuffer-->
+<!--        const buffer = await res.arrayBuffer();-->
+
+<!--        // 2. Zdekoduj używając Protobuf.js-->
+<!--        const decoded = LampConfig.decode(new Uint8Array(buffer));-->
+
+<!--        // 3. Ustaw wartości w formularzu-->
+<!--        document.getElementById('confBri').value = decoded.brightness;-->
+<!--        document.getElementById('briVal').innerText = decoded.brightness; // tekst obok suwaka-->
+<!--        document.getElementById('confCol').value = decoded.color || "#ffffff";-->
+<!--        document.getElementById('confInt').value = decoded.report_interval;-->
+<!--      }-->
+<!--    } catch (e) {-->
+<!--      console.error("Nie udało się pobrać configu", e);-->
+<!--    }-->
+<!--    // -&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;-->
+
+<!--    new bootstrap.Modal(document.getElementById('controlModal')).show();-->
+<!--  }-->
+
+<!--  // async function sendProtoCmd(type) {-->
+<!--  //   const payload = { type: (type==='ON'?0:1) };-->
+<!--  //   const buf = LampCommand.encode(LampCommand.create(payload)).finish();-->
+<!--  //   await sendBin(`${API}/lamps/${currentLamp}/command`, buf);-->
+<!--  //   alert('Komenda wysłana');-->
+<!--  // }-->
+<!--  async function sendProtoCmd(type) {-->
+<!--    const payload = { type: (type==='ON'?0:1) };-->
+<!--    const buf = LampCommand.encode(LampCommand.create(payload)).finish();-->
+
+<!--    await sendBin(`${API}/lamps/${currentLamp}/command`, buf);-->
+
+<!--    // -&#45;&#45; DODAJ TĘ LINIĘ -&#45;&#45;-->
+<!--    await loadLamps(); // Odśwież listę, żeby zaktualizować status-dot (kropkę)-->
+<!--    // &#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;-->
+
+<!--    alert('Komenda wysłana'); // Opcjonalnie usuń alert, bo jest denerwujący przy częstym klikaniu-->
+<!--  }-->
+
+<!--  async function sendProtoConfig() {-->
+<!--    const bri = parseInt(document.getElementById('confBri').value);-->
+<!--    const col = document.getElementById('confCol').value;-->
+<!--    const interval = parseInt(document.getElementById('confInt').value);-->
+
+<!--    const payload = { brightness: bri, color: col, report_interval: interval };-->
+<!--    const buf = LampConfig.encode(LampConfig.create(payload)).finish();-->
+
+<!--    await sendBin(`${API}/lamps/${currentLamp}/config`, buf, 'PUT');-->
+<!--    alert('Konfiguracja wysłana');-->
+<!--  }-->
+
+<!--  // -&#45;&#45; HELPERY -&#45;&#45;-->
+<!--  async function authFetch(url, opts={}) {-->
+<!--    opts.headers = opts.headers || {};-->
+<!--    opts.headers['Authorization'] = `Bearer ${token}`;-->
+<!--    if(opts.body && !opts.headers['Content-Type']) opts.headers['Content-Type']='application/json';-->
+
+<!--    const res = await fetch(url, opts);-->
+<!--    if(res.status===403 || res.status===401) { logout(); return null; }-->
+<!--    if(!res.ok) { alert('Błąd zapytania: ' + res.status); return null; }-->
+
+<!--    // Obsługa braku body (np. DELETE)-->
+<!--    try { return await res; } catch(e) { return null; }-->
+<!--  }-->
+
+<!--  async function sendBin(url, body, method='POST') {-->
+<!--    const res = await fetch(url, {-->
+<!--      method: method,-->
+<!--      headers: {'Authorization':`Bearer ${token}`, 'Content-Type':'application/x-protobuf'},-->
+<!--      body: body-->
+<!--    });-->
+<!--    if(!res.ok) alert('Błąd wysyłania Protobuf');-->
+<!--  }-->
+
+<!--  function logout() { localStorage.removeItem('jwt'); location.reload(); }-->
+<!--  function loading(s) { document.getElementById('loader').style.display = s?'flex':'none'; }-->
+<!--  async function deleteAccount() { if(confirm('Usunąć konto?')) { await authFetch(`${API}/users/me`, {method:'DELETE'}); logout(); } }-->
+<!--</script>-->
+<!--</body>-->
+<!--</html>-->

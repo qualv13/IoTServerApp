@@ -17,13 +17,15 @@ option java_outer_classname = "IotProtos";
 //}
 
 message LampCommand {
-  enum Type { ON = 0; OFF = 1; REBOOT = 2; }
+  enum Type { ON = 0; OFF = 1; REBOOT = 2; OTA_UPDATE = 3;}
   Type type = 1;
+  string ota_url = 2; // Tylko dla OTA_UPDATE
 }
 
 message LampStatus {
   bool is_on = 1;
-  double sensor_value = 2;
+  double sensor_value = 2; // np. temperatura lub zużycie prądu
+  string firmware_version = 3;
 }
 
 message LampConfig {

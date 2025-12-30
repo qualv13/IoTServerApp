@@ -20,11 +20,15 @@ public class LampService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Lamp lamp = lampRepository.findById(lampId).orElse(new Lamp());
+        //Lamp lamp = lampRepository.findById(lampId).orElse(new Lamp());
 
         // LOGIC:
         // If lamp had owner, overwrite him (re-selling).
         // add logs of event, ex. "Ownership transfer from X to Y"
+
+        // ZMIANA: Zamiast orElse(new Lamp()), rzucamy wyjątek
+        Lamp lamp = lampRepository.findById(lampId)
+                .orElseThrow(() -> new RuntimeException("Nie znaleziono lampy o ID: " + lampId + ". Skontaktuj się z administratorem."));
 
         lamp.setId(lampId);
         lamp.setOwner(user);
@@ -70,6 +74,15 @@ public class LampService {
                 .setBrightness(lamp.getBrightness() != null ? lamp.getBrightness() : 50)
                 .setColor(lamp.getColor() != null ? lamp.getColor() : "#ffffff")
                 .setReportInterval(lamp.getReportInterval() != null ? lamp.getReportInterval() : 60)
+                .build();
+    }
+
+    public IotProtos.LampStatus getLampStatus(String lampId) {
+        Lamp lamp = lampRepository.findById(lampId)
+                .orElseThrow(() -> new RuntimeException("Lamp not found"));
+
+        return IotProtos.LampStatus.newBuilder()
+                .setIsOn(lamp.isOn())
                 .build();
     }
 }
