@@ -27,9 +27,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // TODO: working security filter
                         .requestMatchers("/", "/index.html", "/static/**", "/*.js", "/*.css", "/favicon.ico").permitAll()
-
+                        .requestMatchers("/api/mqtt/auth/**").permitAll() // RabbitMQ uderza bez tokena JWT
                         // Login and Register
                         .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/auth/login", "/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users").permitAll() // Rejestracja
 
                         // Options

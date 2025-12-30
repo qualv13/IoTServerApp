@@ -4,14 +4,45 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: iot_postgres
-    ports:
-      - "5438:5432"
+    #ports:
+    #  - "5432:5432"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password
       - POSTGRES_DB=iot_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .             # Buduje obraz z Dockerfile w bieżącym katalogu
+    container_name: iot_backend
+    ports:
+      - "40142:8080"      # Dostęp do API i strony www
+    depends_on:
+      postgres:
+        condition: service_healthy
+    #      rabbitmq:
+    #        condition: service_healthy
+    environment:
+      # Nadpisujemy ustawienia z application.yaml zmiennymi środowiskowymi
+
+      # Konfiguracja Bazy Danych (adres to 'postgres', nie localhost)
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/iot_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=password
+
+      # Konfiguracja MQTT (adres to 'rabbitmq', nie localhost ani srv38...)
+      - MQTT_BROKER=tcp://srv38.mikr.us:40131
+      - MQTT_USERNAME=iotproject
+      - MQTT_PASSWORD=iotproject
+
+      # Konfiguracja JWT (użyj swojego sekretu lub zmiennej)
+      - JWT_SECRET=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
 
 #  # Broker wiadomości (AMQP + MQTT)
 #  rabbitmq:

@@ -4,28 +4,28 @@ package com.iot.backend.proto;
 option java_package = "com.iot.backend.proto";
 option java_outer_classname = "IotProtos";
 
-//message LampConfig {
-//  int32 reading_frequency = 1;
-//  string operation_mode = 2;
-//  double alarm_threshold = 3;
-//}
-
-//message LampStatus {
-//  bool is_on = 1;
-//  double sensor_value = 2;
-//  bool alarm_active = 3;
-//}
-
 message LampCommand {
-  enum Type { ON = 0; OFF = 1; REBOOT = 2; OTA_UPDATE = 3;}
+  enum Type {
+    ON = 0;
+    OFF = 1;
+    REBOOT = 2;
+    OTA_UPDATE = 3; // Wymagane przez OtaController
+  }
   Type type = 1;
-  string ota_url = 2; // Tylko dla OTA_UPDATE
+  string ota_url = 2; // URL do pobrania firmware
 }
 
+// Prosty status (np. odpowiedź na zmianę stanu)
 message LampStatus {
   bool is_on = 1;
-  double sensor_value = 2; // np. temperatura lub zużycie prądu
-  string firmware_version = 3;
+  double sensor_value = 2; // Opcjonalnie, dla kompatybilności
+}
+
+message StatusReport {
+  uint32 version = 1;
+  int64 ts = 2;
+  uint32 uptime_seconds = 3;
+  repeated uint32 temperature_readings = 4; // lub double dla wygody
 }
 
 message LampConfig {

@@ -23,7 +23,7 @@ public class LampController {
     // --- STATUS (GET) ---
     @GetMapping(value = "/{lampId}/status", produces = "application/x-protobuf")
     public IotProtos.LampStatus getStatus(@PathVariable String lampId) {
-        // TODO: Download latest known status from database (saved by MQTT Listener)
+        //  Download latest known status from database (saved by MQTT Listener)
         return lampService.getLampStatus(lampId);
     }
 
@@ -58,7 +58,7 @@ public class LampController {
 //    @GetMapping("/{lampId}/metrics")
 //    public ResponseEntity<String> getMetrics(@PathVariable String lampId) {
 //
-//        // TODO: Implement metrics from lamp get
+//        // Implement metrics from lamp get
 //        return ResponseEntity.ok("{\"metrics\": []}");
 //    }
 

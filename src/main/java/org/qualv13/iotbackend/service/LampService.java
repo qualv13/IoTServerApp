@@ -9,32 +9,75 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.util.HexFormat;
+
 @Service
 @RequiredArgsConstructor
 public class LampService {
     private final LampRepository lampRepository;
     private final UserRepository userRepository;
 
+//    @Transactional
+//    public void assignLampToUser(String username, String lampId) {
+//        User user = userRepository.findByUsername(username)
+//                .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//        //Lamp lamp = lampRepository.findById(lampId).orElse(new Lamp());
+//
+//        // LOGIC:
+//        // If lamp had owner, overwrite him (re-selling).
+//        // add logs of event, ex. "Ownership transfer from X to Y"
+//
+//        // ZMIANA: Zamiast orElse(new Lamp()), rzucamy wyjątek
+//        Lamp lamp = lampRepository.findById(lampId)
+//                .orElseThrow(() -> new RuntimeException("Nie znaleziono lampy o ID: " + lampId + ". Skontaktuj się z administratorem."));
+//
+//        lamp.setId(lampId);
+//        lamp.setOwner(user);
+//        lamp.setFleet(null); // Fleet reset when assigning to another user
+//
+//        lampRepository.save(lamp);
+//    }
+
     @Transactional
-    public void assignLampToUser(String username, String lampId) {
+    public String assignLampToUser(String username, String lampId) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        //Lamp lamp = lampRepository.findById(lampId).orElse(new Lamp());
-
-        // LOGIC:
-        // If lamp had owner, overwrite him (re-selling).
-        // add logs of event, ex. "Ownership transfer from X to Y"
-
-        // ZMIANA: Zamiast orElse(new Lamp()), rzucamy wyjątek
         Lamp lamp = lampRepository.findById(lampId)
-                .orElseThrow(() -> new RuntimeException("Nie znaleziono lampy o ID: " + lampId + ". Skontaktuj się z administratorem."));
+                .orElse(new Lamp());
+
+        // Reset danych przy zmianie właściciela
+        if (lamp.getOwner() != null && !lamp.getOwner().getUsername().equals(username)) {
+            // lampMetricRepository.deleteByLampId(lampId);
+        }
 
         lamp.setId(lampId);
         lamp.setOwner(user);
-        lamp.setFleet(null); // Fleet reset when assigning to another user
+        lamp.setFleet(null);
+
+        // --- NOWA LOGIKA TOKENA ---
+
+        // 1. Generujemy 32 losowe bajty
+        byte[] randomBytes = new byte[32];
+        new SecureRandom().nextBytes(randomBytes);
+
+        // 2. Zamieniamy na String HEX (to jest Twój TOKEN do wpisania w lampę)
+        String rawToken = HexFormat.of().formatHex(randomBytes);
+
+        // 3. Hashujemy SHA-256
+        String tokenHash = calculateSha256(rawToken);
+
+        // 4. Zapisujemy HASH w bazie
+        lamp.setDeviceTokenHash(tokenHash);
 
         lampRepository.save(lamp);
+
+        // 5. Zwracamy CZYSTY token użytkownikowi
+        return rawToken;
     }
 
     @Transactional
@@ -84,5 +127,15 @@ public class LampService {
         return IotProtos.LampStatus.newBuilder()
                 .setIsOn(lamp.isOn())
                 .build();
+    }
+
+    private String calculateSha256(String text) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] encodedhash = digest.digest(text.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(encodedhash);
+        } catch (Exception e) {
+            throw new RuntimeException("Błąd hashowania tokena", e);
+        }
     }
 }

@@ -10,6 +10,9 @@ public class Lamp {
     @Id
     private String id; // Serial Number / MAC Address
 
+    @Column(name = "device_token_hash")
+    private String deviceTokenHash;
+
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User owner;
@@ -19,6 +22,7 @@ public class Lamp {
     private Fleet fleet;
 
     //private Integer readingFrequency;
+    private String firmwareVersion;
 
     private Integer brightness = 50;
     private String color = "#ffffff";

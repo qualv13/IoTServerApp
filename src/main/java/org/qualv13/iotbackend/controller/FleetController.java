@@ -12,6 +12,7 @@ import org.qualv13.iotbackend.service.MqttService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -64,16 +65,52 @@ public class FleetController {
     // --- Control & PROTOBUF (for whole fleet) ---
 
     @PutMapping(value = "/{fleetId}/config", consumes = "application/x-protobuf")
+    @Transactional
     public ResponseEntity<Void> setFleetConfig(@PathVariable Long fleetId,
                                                @RequestBody IotProtos.LampConfig config) {
+        // 1. MQTT
         mqttService.sendConfigToFleet(fleetId, config);
+
+        // 2. BAZA DANYCH
+        Fleet fleet = fleetRepository.findById(fleetId)
+                .orElseThrow(() -> new RuntimeException("Fleet not found"));
+
+        for (Lamp lamp : fleet.getLamps()) {
+            // Aktualizujemy tylko te pola, które zostały wysłane (są > 0 lub niepuste)
+            if (config.getBrightness() > 0) lamp.setBrightness(config.getBrightness());
+            if (config.getColor() != null && !config.getColor().isEmpty()) lamp.setColor(config.getColor());
+            if (config.getReportInterval() > 0) lamp.setReportInterval(config.getReportInterval());
+        }
+
         return ResponseEntity.ok().build();
     }
 
     @PostMapping(value = "/{fleetId}/command", consumes = "application/x-protobuf")
+    @Transactional
     public ResponseEntity<Void> sendFleetCommand(@PathVariable Long fleetId,
                                                  @RequestBody IotProtos.LampCommand command) {
+        // 1. MQTT (Fizyka)
         mqttService.sendCommandToFleet(fleetId, command);
+
+        // 2. BAZA DANYCH (Logika aplikacji)
+        Fleet fleet = fleetRepository.findById(fleetId)
+                .orElseThrow(() -> new RuntimeException("Fleet not found"));
+
+        // Ustalmy jaki stan chcemy zapisać
+        Boolean newState = null;
+        if (command.getType() == IotProtos.LampCommand.Type.ON) {
+            newState = true;
+        } else if (command.getType() == IotProtos.LampCommand.Type.OFF) {
+            newState = false;
+        }
+
+        // Jeśli komenda to ON lub OFF, aktualizujemy wszystkie lampy w bazie
+        if (newState != null) {
+            for (Lamp lamp : fleet.getLamps()) {
+                lamp.setOn(newState);
+            }
+        }
+
         return ResponseEntity.ok().build();
     }
 

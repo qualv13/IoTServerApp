@@ -8,11 +8,10 @@ import org.qualv13.iotbackend.repository.LampRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.messaging.Message;
-import org.springframework.messaging.MessageHandler;
 import org.springframework.messaging.MessagingException;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -21,38 +20,59 @@ public class MqttListenerService {
     private final LampRepository lampRepository;
     private final LampMetricRepository metricRepository;
 
-    @ServiceActivator(inputChannel = "mqttInputChannel") // Musi pasować do nazwy beana w MqttConfig
+    @ServiceActivator(inputChannel = "mqttInputChannel")
     public void handleMessage(Message<?> message) throws MessagingException {
         String topic = (String) message.getHeaders().get("mqtt_receivedTopic");
         Object payload = message.getPayload();
+        byte[] data = (payload instanceof byte[]) ? (byte[]) payload : payload.toString().getBytes();
 
-        // Topic format: lamps/{lampId}/status
         if (topic == null) return;
         String lampId = extractLampId(topic);
 
         try {
-            // Obsługa STATUSU (np. włączenie/wyłączenie)
+            // 1. Obsługa prostego statusu (np. zmiana ON/OFF)
             if (topic.endsWith("/status")) {
-                byte[] data = (payload instanceof byte[]) ? (byte[]) payload : payload.toString().getBytes();
                 IotProtos.LampStatus status = IotProtos.LampStatus.parseFrom(data);
-
-                // Logika aktualizacji statusu (ON/OFF)
-                updateLampState(lampId, status);
+                updateLampState(lampId, status.getIsOn());
             }
-            // Obsługa METRYK (np. temperatura, wilgotność)
+            // 2. Obsługa pełnego raportu telemetrycznego (Hex: 08 01 10...)
             else if (topic.endsWith("/metrics")) {
-                // Zakładamy, że tutaj też przychodzi Protobuf LampStatus z wypełnionym sensor_value
-                byte[] data = (payload instanceof byte[]) ? (byte[]) payload : payload.toString().getBytes();
-                IotProtos.LampStatus metricData = IotProtos.LampStatus.parseFrom(data);
+                IotProtos.StatusReport report = IotProtos.StatusReport.parseFrom(data);
 
-                saveMetric(lampId, metricData.getSensorValue());
+                // Zapisujemy uptime i wersję firmware (do encji Lamp)
+                updateLampInfo(lampId, report.getVersion(), report.getUptimeSeconds());
+
+                // Zapisujemy metryki (Temperatury)
+                // Zakładamy, że interesuje nas średnia lub ostatnia wartość
+                if (report.getTemperatureReadingsCount() > 0) {
+                    // Oblicz średnią z odczytów w liście
+                    double avgTemp = report.getTemperatureReadingsList().stream()
+                            .mapToDouble(Double::valueOf)
+                            .average().orElse(0.0);
+
+                    saveMetric(lampId, avgTemp);
+                }
             }
         } catch (Exception e) {
-            System.err.println("Błąd przetwarzania MQTT [" + topic + "]: " + e.getMessage());
+            System.err.println("Błąd deserializacji Protobuf dla [" + topic + "]: " + e.getMessage());
         }
     }
 
-    // Wydzielona metoda do zapisu metryki
+    private void updateLampState(String lampId, boolean isOn) {
+        lampRepository.findById(lampId).ifPresent(lamp -> {
+            lamp.setOn(isOn);
+            lampRepository.save(lamp);
+        });
+    }
+
+    private void updateLampInfo(String lampId, int version, long uptime) {
+        lampRepository.findById(lampId).ifPresent(lamp -> {
+            // lamp.setFirmwareVersion(String.valueOf(version)); // Wymaga pola w Lamp.java
+            // Możemy tu logować uptime
+            lampRepository.save(lamp);
+        });
+    }
+
     private void saveMetric(String lampId, double value) {
         lampRepository.findById(lampId).ifPresent(lamp -> {
             LampMetric metric = new LampMetric(value, lamp);
@@ -60,35 +80,9 @@ public class MqttListenerService {
         });
     }
 
-    // Wydzielona metoda do aktualizacji stanu
-    private void updateLampState(String lampId, IotProtos.LampStatus status) {
-        lampRepository.findById(lampId).ifPresent(lamp -> {
-            lamp.setOn(status.getIsOn());
-            lampRepository.save(lamp);
-        });
-    }
-
-    private void saveStatusAndMetrics(String lampId, IotProtos.LampStatus status) {
-        Optional<Lamp> lampOpt = lampRepository.findById(lampId);
-        if (lampOpt.isPresent()) {
-            Lamp lamp = lampOpt.get();
-
-            // 1. Aktualizacja aktualnego stanu
-            lamp.setOn(status.getIsOn());
-            lampRepository.save(lamp);
-
-            // 2. Zapis historii metryk
-            if (status.getSensorValue() != 0) {
-                LampMetric metric = new LampMetric(status.getSensorValue(), lamp);
-                metricRepository.save(metric);
-            }
-        }
-    }
-
     private String extractLampId(String topic) {
-        // lamps/12345/status -> 12345
+        // format: lamps/{id}/...
         String[] parts = topic.split("/");
-        if (parts.length >= 2) return parts[1];
-        return "";
+        return (parts.length >= 2) ? parts[1] : "";
     }
 }

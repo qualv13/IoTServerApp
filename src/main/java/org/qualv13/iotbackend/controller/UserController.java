@@ -13,7 +13,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.qualv13.iotbackend.dto.LampDto;
 import org.springframework.security.core.Authentication;
+
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.qualv13.iotbackend.dto.ChangePasswordRequest;
 import org.qualv13.iotbackend.dto.UpdateUserDto;
@@ -113,9 +116,12 @@ public class UserController {
 
     // Add lamp
     @PostMapping("/me/lamps")
-    public ResponseEntity<Void> addLamp(@RequestBody AddLampDto dto, Authentication authentication) {
-        lampService.assignLampToUser(authentication.getName(), dto.getLampId());
-        return ResponseEntity.ok().build();
+    public ResponseEntity<Map<String, String>> addLamp(@RequestBody AddLampDto dto, Authentication authentication) {
+        // Metoda serwisu zwraca teraz String (token)
+        String newToken = lampService.assignLampToUser(authentication.getName(), dto.getLampId());
+
+        // Zwracamy go w JSONie
+        return ResponseEntity.ok(Collections.singletonMap("device_token", newToken));
     }
 
     // Delete lamp from account (DELETE /users/me/lamps/{lampId})
