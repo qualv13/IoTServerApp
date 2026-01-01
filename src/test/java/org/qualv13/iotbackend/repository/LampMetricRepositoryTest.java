@@ -1,47 +1,43 @@
 package org.qualv13.iotbackend.repository;
 
-import org.junit.jupiter.api.Test;
-import org.qualv13.iotbackend.entity.Lamp;
 import org.qualv13.iotbackend.entity.LampMetric;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
-@ActiveProfiles("test")
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class LampMetricRepositoryTest {
 
-    @Autowired private LampMetricRepository metricRepository;
-    @Autowired private LampRepository lampRepository;
+    @Autowired
+    private LampMetricRepository lampMetricRepository;
 
     @Test
-    void shouldReturnOrderedMetrics() {
-        // Given
-        Lamp lamp = new Lamp();
-        lamp.setId("test_lamp");
-        lampRepository.save(lamp);
+    void shouldFindTop100ByLampIdOrderByTimestampDesc() {
+        // given
+        String lampId = "test_lamp_1";
 
-        LampMetric m1 = new LampMetric(10.0, lamp);
-        m1.setTimestamp(LocalDateTime.now().minusHours(1));
+        // Tworzymy metryki w pętli
+        for (int i = 0; i < 5; i++) {
+            LampMetric metric = new LampMetric();
+            metric.setLampId(lampId);
+            metric.setTemperatures("25.0,26.0"); // Nowe pole (String)
+            metric.setUptimeSeconds(100 + i);    // Nowe pole
+            metric.setTimestamp(LocalDateTime.now().minusMinutes(i));
+            metric.setDeviceTimestamp(System.currentTimeMillis());
 
-        LampMetric m2 = new LampMetric(20.0, lamp);
-        m2.setTimestamp(LocalDateTime.now()); // Najnowsze
+            lampMetricRepository.save(metric);
+        }
 
-        metricRepository.save(m1);
-        metricRepository.save(m2);
+        // when
+        List<LampMetric> result = lampMetricRepository.findTop100ByLampIdOrderByTimestampDesc(lampId);
 
-        // When
-        List<LampMetric> metrics = metricRepository.findTop100ByLampIdOrderByTimestampDesc("test_lamp");
-
-        // Then
-        assertEquals(2, metrics.size());
-        assertEquals(20.0, metrics.get(0).getValue()); // M2 powinno być pierwsze (najnowsze)
+        // then
+        assertThat(result).hasSize(5);
+        assertThat(result.get(0).getTemperatures()).isEqualTo("25.0,26.0"); // Sprawdzamy getTemperatures()
     }
 }

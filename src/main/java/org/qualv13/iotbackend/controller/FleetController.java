@@ -7,10 +7,8 @@ import org.qualv13.iotbackend.entity.Fleet;
 import org.qualv13.iotbackend.entity.Lamp;
 import org.qualv13.iotbackend.repository.FleetRepository;
 import org.qualv13.iotbackend.service.FleetService;
-import org.qualv13.iotbackend.service.LampService;
 import org.qualv13.iotbackend.service.MqttService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -29,12 +27,10 @@ public class FleetController {
     private final FleetRepository fleetRepository;
 
     // --- Fleet management ---
-
     @GetMapping
     public ResponseEntity<List<FleetDto>> listMyFleets(Principal principal) {
-        // Mapping Fleet -> FleetDto (id, name)
         var fleets = fleetService.getMyFleets(principal.getName()).stream()
-                .map(f -> new FleetDto(f.getId(), f.getName())) // Create DTO
+                .map(f -> new FleetDto(f.getId(), f.getName()))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(fleets);
     }
@@ -76,10 +72,12 @@ public class FleetController {
                 .orElseThrow(() -> new RuntimeException("Fleet not found"));
 
         for (Lamp lamp : fleet.getLamps()) {
-            // Aktualizujemy tylko te pola, które zostały wysłane (są > 0 lub niepuste)
-            if (config.getBrightness() > 0) lamp.setBrightness(config.getBrightness());
-            if (config.getColor() != null && !config.getColor().isEmpty()) lamp.setColor(config.getColor());
-            if (config.getReportInterval() > 0) lamp.setReportInterval(config.getReportInterval());
+            // Aktualizacja interwału, jeśli jest w configu
+            if (config.hasInternalLampConfig()) {
+                int interval = config.getInternalLampConfig().getReportingIntervalSeconds();
+                if (interval > 0) lamp.setReportInterval(interval);
+            }
+            // Tutaj można dodać więcej logiki wyciągania danych z configu
         }
 
         return ResponseEntity.ok().build();
@@ -89,22 +87,21 @@ public class FleetController {
     @Transactional
     public ResponseEntity<Void> sendFleetCommand(@PathVariable Long fleetId,
                                                  @RequestBody IotProtos.LampCommand command) {
-        // 1. MQTT (Fizyka)
+        // 1. MQTT
         mqttService.sendCommandToFleet(fleetId, command);
 
-        // 2. BAZA DANYCH (Logika aplikacji)
+        // 2. BAZA DANYCH
         Fleet fleet = fleetRepository.findById(fleetId)
                 .orElseThrow(() -> new RuntimeException("Fleet not found"));
 
-        // Ustalmy jaki stan chcemy zapisać
+        // Próbujemy odgadnąć stan na podstawie komendy
         Boolean newState = null;
-        if (command.getType() == IotProtos.LampCommand.Type.ON) {
-            newState = true;
-        } else if (command.getType() == IotProtos.LampCommand.Type.OFF) {
-            newState = false;
+        if (command.hasSetDirectSettingsCommand()) {
+            newState = true; // Ustawienie koloru = włączenie
         }
+        // Jeśli dodasz komendę TurnOff, obsłuż ją tutaj:
+        // else if (command.hasTurnOffCommand()) newState = false;
 
-        // Jeśli komenda to ON lub OFF, aktualizujemy wszystkie lampy w bazie
         if (newState != null) {
             for (Lamp lamp : fleet.getLamps()) {
                 lamp.setOn(newState);
@@ -114,36 +111,27 @@ public class FleetController {
         return ResponseEntity.ok().build();
     }
 
-    // GET /fleets/{id}/config - Pobieramy konfigurację "reprezentatywną" (np. pierwszej lampy)
-    // lub zwracamy null, jeśli flota jest niespójna.
+    // GET Config floty (uproszczony)
     @GetMapping(value = "/{fleetId}/config", produces = "application/x-protobuf")
     public IotProtos.LampConfig getFleetConfig(@PathVariable Long fleetId) {
-        // Logika uproszczona: zwracamy domyślny config
         return IotProtos.LampConfig.newBuilder()
-                .setBrightness(50)
-                .setReportInterval(60)
-                .setColor("#ffffff")
+                .setVersion(1)
+                .setInternalLampConfig(
+                        IotProtos.InternalLampConfig.newBuilder().setReportingIntervalSeconds(60).build()
+                )
                 .build();
     }
 
-    // GET /fleets/{id}/status - Czy flota jest "ON"?
+    // ZMIANA: Zwracamy StatusReport (agregacja jest trudna, zwracamy pusty)
     @GetMapping(value = "/{fleetId}/status", produces = "application/x-protobuf")
-    public IotProtos.LampStatus getFleetStatus(@PathVariable Long fleetId) {
-        Fleet fleet = fleetRepository.findById(fleetId).orElseThrow();
-        // Sprawdzamy, czy chociaż jedna lampa jest włączona
-        boolean anyOn = fleet.getLamps().stream().anyMatch(Lamp::isOn);
-
-        return IotProtos.LampStatus.newBuilder()
-                .setIsOn(anyOn)
-                .setSensorValue(0) // Średnia?
-                .build();
+    public IotProtos.StatusReport getFleetStatus(@PathVariable Long fleetId) {
+        // Nowy StatusReport nie ma pola "isOn", więc zwracamy pusty obiekt
+        // Frontend i tak patrzy na listę lamp, a nie na ten endpoint dla floty.
+        return IotProtos.StatusReport.newBuilder().setVersion(1).build();
     }
 
-    // GET /fleets/{id}/metrics - Średnia z czujników całej floty
     @GetMapping("/{fleetId}/metrics")
     public ResponseEntity<List<Double>> getFleetMetrics(@PathVariable Long fleetId) {
-        // Tutaj logika byłaby bardziej złożona (agregacja SQL),
-        // dla zaliczenia wystarczy zwrócić np. metryki z wszystkich lamp płasko
         return ResponseEntity.ok(List.of());
     }
 }

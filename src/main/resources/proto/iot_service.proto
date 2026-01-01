@@ -1,35 +1,152 @@
 syntax = "proto3";
-package com.iot.backend.proto;
 
 option java_package = "com.iot.backend.proto";
 option java_outer_classname = "IotProtos";
-
-message LampCommand {
-  enum Type {
-    ON = 0;
-    OFF = 1;
-    REBOOT = 2;
-    OTA_UPDATE = 3; // Wymagane przez OtaController
-  }
-  Type type = 1;
-  string ota_url = 2; // URL do pobrania firmware
-}
-
-// Prosty status (np. odpowiedź na zmianę stanu)
-message LampStatus {
-  bool is_on = 1;
-  double sensor_value = 2; // Opcjonalnie, dla kompatybilności
-}
 
 message StatusReport {
   uint32 version = 1;
   int64 ts = 2;
   uint32 uptime_seconds = 3;
-  repeated uint32 temperature_readings = 4; // lub double dla wygody
+  repeated uint32 temperature_readings = 4;
+}
+
+message DirectSettings {
+  uint32 red = 1;
+  uint32 green = 2;
+  uint32 blue = 3;
+  uint32 cold_white = 4;
+  uint32 neutral_white = 5;
+  uint32 warm_white = 6;
+}
+
+message PhotoWhiteSetting {
+  uint32 intensity = 1;
+  uint32 temperature = 2;
+}
+
+message PhotoColorSetting {
+  uint32 intensity = 1;
+  uint32 hue = 2;
+  uint32 saturation = 3;
+}
+
+enum DiscoModes {
+  OFF = 0;
+  COLOR_CYCLE = 1;
+  STROBE = 2;
+  PULSE = 3;
+}
+
+message DiscoModeSettings {
+  DiscoModes mode = 1;
+  uint32 speed = 2;
+  uint32 intensity = 3;
+}
+
+message HourSetting {
+  uint32 start_hour = 1;
+  uint32 end_hour = 2;
+  uint32 transition_duration_minutes = 3;
+}
+
+message BrightnessSettings {
+  uint32 min_brightness = 1;
+  uint32 max_brightness = 2;
+  uint32 transition_duration_minutes = 3;
+}
+
+message ScheduleEntry {
+  oneof trigger {
+    HourSetting hour_setting = 1;
+    BrightnessSettings brightness_settings = 2;
+  }
+  oneof action {
+    DirectSettings direct_settings = 3;
+    PhotoWhiteSetting photo_white_setting = 4;
+    PhotoColorSetting photo_color_setting = 5;
+    DiscoModeSettings disco_mode_settings = 6;
+  }
+}
+
+message DaylightModeSettings {
+  repeated ScheduleEntry schedule_entries = 1;
+}
+
+message PresetEntry {
+  oneof setting {
+    DirectSettings direct_settings = 1;
+    PhotoWhiteSetting photo_white_setting = 2;
+    PhotoColorSetting photo_color_setting = 3;
+  }
+}
+
+message PresetModeSetting {
+  repeated PresetEntry presets = 1;
+}
+
+message ModeCombinedSetting {
+  uint32 mode_id = 1;
+  oneof setting {
+    DaylightModeSettings daylight_mode_settings = 2;
+    PresetModeSetting preset_mode_setting = 3;
+    DiscoModeSettings disco_mode_settings = 4;
+  }
+}
+
+message InternalLampConfig {
+  uint32 reporting_interval_seconds = 1;
 }
 
 message LampConfig {
-  int32 brightness = 1;
-  string color = 2;
-  int32 report_interval = 3;
+  uint32 version = 1; // current config version: 1
+  int64 ts = 2;
+  repeated ModeCombinedSetting mode_settings = 3;
+  InternalLampConfig internal_lamp_config = 4; // not exposed to user
+}
+
+message SetWifiParamsCommand {
+  string ssid = 1;
+  string password = 2;
+}
+
+message BlinkLedCommand {
+  uint32 duration = 1;
+}
+
+message SetDirectSettingsCommand {
+  DirectSettings direct_settings = 1;
+}
+
+message SetPhotoWhiteSettingsCommand {
+  PhotoWhiteSetting photo_white_setting = 1;
+}
+
+message SetPhotoColorSettingsCommand {
+  PhotoColorSetting photo_color_setting = 1;
+}
+
+message SetMode {
+  uint32 mode_id = 1;
+}
+
+message RebootCommand {}
+
+message DownloadOtaUpdateCommand {
+  string ota_url = 1;
+}
+
+
+message LampCommand {
+  uint32 version = 1; // current command version: 1
+  int64 ts = 2;
+  oneof command {
+    SetWifiParamsCommand set_wifi_params_command = 3;
+    BlinkLedCommand blink_led_command = 4;
+    SetDirectSettingsCommand set_direct_settings_command = 5;
+    SetPhotoWhiteSettingsCommand set_photo_white_settings_command = 6;
+    SetPhotoColorSettingsCommand set_photo_color_settings_command = 7;
+    SetMode set_mode_command = 8;
+    RebootCommand reboot_command = 9;
+    DownloadOtaUpdateCommand download_ota_update_command = 10;
+  }
 }

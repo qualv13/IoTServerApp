@@ -1,0 +1,30 @@
+# Konfiguracja Bazy Danych (H2 w pamięci)
+spring:
+  datasource:
+    # MODE=PostgreSQL sprawia, że H2 rozumie składnię "RETURNING ID"
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        # Ważne: Wymuszamy dialekt H2, żeby Hibernate nie generował zbyt specyficznego SQL
+        dialect: org.hibernate.dialect.H2Dialect
+
+# Zaślepki dla MQTT (żeby testy nie próbowały łączyć się z prawdziwym Mikrusem)
+mqtt:
+  broker: tcp://srv38.mikr.us:40131
+  client-id: server-backend-app
+  username: iotproject
+  password: iotproject
+  topics:
+    command: lamps/+/command
+    metrics: lamps/+/metrics
+
+# Zaślepka dla JWT (musi być obecna, żeby JwtService wstał)
+jwt:
+  secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970

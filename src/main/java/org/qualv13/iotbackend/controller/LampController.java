@@ -6,7 +6,6 @@ import org.qualv13.iotbackend.service.LampService;
 import org.qualv13.iotbackend.service.MqttService;
 import org.qualv13.iotbackend.entity.LampMetric;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,12 +18,12 @@ public class LampController {
 
     private final MqttService mqttService;
     private final LampService lampService;
+    private final LampMetricRepository metricRepository; // Przeniesione do konstruktora (Lombok)
 
     // --- STATUS (GET) ---
     @GetMapping(value = "/{lampId}/status", produces = "application/x-protobuf")
-    public IotProtos.LampStatus getStatus(@PathVariable String lampId) {
-        //  Download latest known status from database (saved by MQTT Listener)
-        return lampService.getLampStatus(lampId);
+    public IotProtos.StatusReport getStatus(@PathVariable String lampId) {
+        return lampService.getLampStatusReport(lampId);
     }
 
     // --- CONFIG (GET/PUT) ---
@@ -36,9 +35,7 @@ public class LampController {
     @PutMapping(value = "/{lampId}/config", consumes = "application/x-protobuf")
     public ResponseEntity<Void> setConfig(@PathVariable String lampId,
                                           @RequestBody IotProtos.LampConfig config) {
-        // Save in db
         lampService.updateLampConfig(lampId, config);
-        // Send through MQTT
         mqttService.sendConfigToLamp(lampId, config);
         return ResponseEntity.ok().build();
     }
@@ -47,29 +44,29 @@ public class LampController {
     @PostMapping(value = "/{lampId}/command", consumes = "application/x-protobuf")
     public ResponseEntity<Void> sendCommand(@PathVariable String lampId,
                                             @RequestBody IotProtos.LampCommand command) {
-        // Save in db
-        lampService.updateLampStatus(lampId, command);
-        // Send through MQTT
+        lampService.updateLampStateFromCommand(lampId, command);
         mqttService.sendCommandToLamp(lampId, command);
         return ResponseEntity.ok().build();
     }
 
-//    // --- METRICS (GET) ---
-//    @GetMapping("/{lampId}/metrics")
-//    public ResponseEntity<String> getMetrics(@PathVariable String lampId) {
-//
-//        // Implement metrics from lamp get
-//        return ResponseEntity.ok("{\"metrics\": []}");
-//    }
-
-    @Autowired
-    private LampMetricRepository metricRepository;
-
+    // --- METRICS (GET) ---
     @GetMapping("/{lampId}/metrics")
     public ResponseEntity<List<Double>> getMetrics(@PathVariable String lampId) {
-        // Zwracamy tylko wartości dla uproszczenia (lub stwórz DTO z czasem)
+        // ZMIANA: Parsujemy string "temp1,temp2" na double (bierzemy pierwszy)
         List<Double> values = metricRepository.findTop100ByLampIdOrderByTimestampDesc(lampId)
-                .stream().map(LampMetric::getValue).toList();
+                .stream()
+                .map(metric -> {
+                    String temps = metric.getTemperatures();
+                    if (temps == null || temps.isEmpty()) return 0.0;
+                    try {
+                        // Bierzemy pierwszą temperaturę z listy
+                        String firstTemp = temps.split(",")[0];
+                        return Double.parseDouble(firstTemp);
+                    } catch (Exception e) {
+                        return 0.0;
+                    }
+                })
+                .toList();
         return ResponseEntity.ok(values);
     }
 }
