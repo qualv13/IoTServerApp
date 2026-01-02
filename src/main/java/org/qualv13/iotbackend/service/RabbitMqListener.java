@@ -1,6 +1,7 @@
 package org.qualv13.iotbackend.service;
 
 import com.iot.backend.proto.IotProtos;
+import lombok.extern.slf4j.Slf4j;
 import org.qualv13.iotbackend.config.RabbitConfig;
 import org.qualv13.iotbackend.entity.LampMetric;
 import org.qualv13.iotbackend.repository.LampMetricRepository;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RabbitMqListener {
@@ -22,11 +24,15 @@ public class RabbitMqListener {
     @RabbitListener(queues = RabbitConfig.QUEUE_NAME)
     public void receiveMessage(byte[] payload,
                                @Header(AmqpHeaders.RECEIVED_ROUTING_KEY) String topic) {
+        log.info("Odebrano wiadomość z RabbitMQ! Temat: {}, Rozmiar: {} bajtów", topic, payload.length);
         try {
             // Topic format: lamps/{lampId}/{messageType}
-            String[] parts = topic.split("/");
-            if (parts.length < 3) return;
-
+            String[] parts = topic.split("\\.");
+            //log.info("Coś przyszło");
+            if (parts.length < 2) {
+                log.warn("Ignoruję temat {} - za krótki format", topic); // Dodaj logowanie odrzuceń
+                return;
+            }
             String lampId = parts[1];
             String msgType = parts[2]; // np. "status"
 
@@ -51,12 +57,16 @@ public class RabbitMqListener {
 
                 metricRepository.save(metric);
 
-                System.out.println("Zapisano status dla lampy: " + lampId + ", Uptime: " + report.getUptimeSeconds());
+                //System.out.println("Zapisano status dla lampy: " + lampId + ", Uptime: " + report.getUptimeSeconds());
+                log.info("Zapisano status dla lampy: {}, Uptime: {}", lampId, report.getUptimeSeconds());
+            }else{
+                log.warn("Wiadomość przyszła, ale nie ma \"status\" :( ");
             }
 
         } catch (Exception e) {
-            System.err.println("Błąd dekodowania Proto: " + e.getMessage());
-            e.printStackTrace();
+            //System.err.println("Błąd dekodowania Proto: " + e.getMessage());
+            //e.printStackTrace();
+            log.error("Błąd dekodowania Proto dla tematu {}: {}", topic, e.getMessage(), e);
         }
     }
 }

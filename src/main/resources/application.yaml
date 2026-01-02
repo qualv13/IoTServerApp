@@ -12,6 +12,8 @@ spring:
 
 mqtt:
   broker: tcp://srv38.mikr.us:40131
+  host: rabbitmq-mqtt-kierzno
+  port: 5672
   client-id: server-backend-app
   username: iotproject
   password: iotproject

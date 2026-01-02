@@ -17,6 +17,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - iot-net
 
   backend:
     build: .             # Buduje obraz z Dockerfile w bieżącym katalogu
@@ -44,6 +46,9 @@ services:
       # Konfiguracja JWT (użyj swojego sekretu lub zmiennej)
       - JWT_SECRET=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
 
+    networks:
+      - iot-net
+
 #  # Broker wiadomości (AMQP + MQTT)
 #  rabbitmq:
 #    image: rabbitmq:3-management
@@ -57,6 +62,10 @@ services:
 #      - RABBITMQ_DEFAULT_PASS=guest
 #    # Ważne: Włączamy plugin MQTT przy starcie
 #    command: /bin/sh -c "rabbitmq-plugins enable rabbitmq_mqtt && rabbitmq-server"
+
+networks:
+  iot-net:
+    external: true
 
 volumes:
   postgres_data:

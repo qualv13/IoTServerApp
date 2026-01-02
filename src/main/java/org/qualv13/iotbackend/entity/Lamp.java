@@ -10,6 +10,9 @@ public class Lamp {
     @Id
     private String id; // Serial Number / MAC Address
 
+    @Column(name = "device_name")
+    private String deviceName;
+
     @Column(name = "device_token_hash")
     private String deviceTokenHash;
 
