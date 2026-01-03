@@ -33,6 +33,9 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
+                        .requestMatchers("/error").permitAll()
+                        // Permit all RabbitMQ auth callbacks
+                        .requestMatchers(HttpMethod.POST, "/api/mqtt/auth/**").permitAll()
                         // Login and Register
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/auth/login", "/auth/refresh").permitAll()
