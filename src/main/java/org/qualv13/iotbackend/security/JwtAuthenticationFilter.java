@@ -74,4 +74,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         System.out.println("--- END FILTER DEBUG ---");
         filterChain.doFilter(request, response);
     }
+
+    @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        String path = request.getServletPath();
+        // Nie uruchamiaj filtra JWT dla Swaggera
+        return  path.startsWith("/swagger-ui") ||
+                path.startsWith("/v3/api-docs");
+    }
 }

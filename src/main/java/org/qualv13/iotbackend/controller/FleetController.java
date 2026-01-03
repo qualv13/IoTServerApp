@@ -1,15 +1,22 @@
 package org.qualv13.iotbackend.controller;
 
 import com.iot.backend.proto.IotProtos;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.qualv13.iotbackend.dto.FleetDto;
 import org.qualv13.iotbackend.dto.LampDto;
 import org.qualv13.iotbackend.entity.Fleet;
 import org.qualv13.iotbackend.entity.Lamp;
+import org.qualv13.iotbackend.entity.User;
 import org.qualv13.iotbackend.repository.FleetRepository;
+import org.qualv13.iotbackend.repository.LampRepository;
+import org.qualv13.iotbackend.repository.UserRepository;
 import org.qualv13.iotbackend.service.FleetService;
 import org.qualv13.iotbackend.service.MqttService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,8 +32,11 @@ public class FleetController {
     private final FleetService fleetService;
     private final MqttService mqttService;
     private final FleetRepository fleetRepository;
+    private final UserRepository userRepository;
+    private final LampRepository lampRepository;
 
     // --- Fleet management ---
+    @Operation(summary = "Pobierz moje floty", description = "Zwraca listę grup (flot) utworzonych przez użytkownika.")
     @GetMapping
     public ResponseEntity<List<FleetDto>> listMyFleets(Principal principal) {
         var fleets = fleetService.getMyFleets(principal.getName()).stream()
@@ -35,9 +45,33 @@ public class FleetController {
         return ResponseEntity.ok(fleets);
     }
 
+    @Operation(summary = "Utwórz nową flotę", description = "Tworzy pustą grupę o podanej nazwie.")
     @PostMapping
     public ResponseEntity<Void> createFleet(@RequestBody FleetDto dto, Principal principal) {
         fleetService.createFleet(dto.getName(), principal.getName());
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Usuń flotę", description = "Usuwa grupę. Lampy należące do grupy NIE są usuwane, tylko odpinane (fleet_id = null).")
+    @DeleteMapping("/{fleetId}")
+    @Transactional
+    public ResponseEntity<Void> deleteFleet(@PathVariable Long fleetId, Authentication auth) {
+        User user = userRepository.findByUsername(auth.getName()).orElseThrow();
+        Fleet fleet = fleetRepository.findById(fleetId).orElseThrow();
+
+        if (!fleet.getOwner().getId().equals(user.getId())) {
+            return ResponseEntity.status(403).build();
+        }
+
+        // Odepnij lampy
+        if (fleet.getLamps() != null) {
+            fleet.getLamps().forEach(lamp -> {
+                lamp.setFleet(null);
+                lampRepository.save(lamp);
+            });
+        }
+
+        fleetRepository.delete(fleet);
         return ResponseEntity.ok().build();
     }
 
@@ -46,12 +80,14 @@ public class FleetController {
         return ResponseEntity.ok(fleetService.getLampsInFleet(fleetId));
     }
 
+    @Operation(summary = "Dodaj lampę do floty", description = "Przypisuje lampę do podanej grupy. Lampa musi należeć do tego samego użytkownika.")
     @PostMapping("/{fleetId}/lamps/{lampId}")
     public ResponseEntity<Void> addLampToFleet(@PathVariable Long fleetId, @PathVariable String lampId) {
         fleetService.addLampToFleet(fleetId, lampId);
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "Usuń lampę z floty", description = "Odpina lampę od grupy (ustawia fleet_id = null).")
     @DeleteMapping("/{fleetId}/lamps/{lampId}")
     public ResponseEntity<Void> removeLampFromFleet(@PathVariable Long fleetId, @PathVariable String lampId) {
         fleetService.removeLampFromFleet(fleetId, lampId);
@@ -83,8 +119,12 @@ public class FleetController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "Wyślij komendę do floty (Protobuf)", description = "Wysyła binarną komendę (np. ON/OFF) do wszystkich lamp w grupie przez MQTT.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Komenda wysłana"),
+            @ApiResponse(responseCode = "400", description = "Błąd dekodowania Protobuf")
+    })
     @PostMapping(value = "/{fleetId}/command", consumes = "application/x-protobuf")
-    @Transactional
     public ResponseEntity<Void> sendFleetCommand(@PathVariable Long fleetId,
                                                  @RequestBody IotProtos.LampCommand command) {
         // 1. MQTT

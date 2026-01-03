@@ -28,6 +28,11 @@ public class SecurityConfig {
                         // TODO: working security filter
                         .requestMatchers("/", "/index.html", "/static/**", "/*.js", "/*.css", "/favicon.ico").permitAll()
                         .requestMatchers("/api/mqtt/auth/**").permitAll() // RabbitMQ uderza bez tokena JWT
+                        .requestMatchers(
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
                         // Login and Register
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/auth/login", "/auth/refresh").permitAll()

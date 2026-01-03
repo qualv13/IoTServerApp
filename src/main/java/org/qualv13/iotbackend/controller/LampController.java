@@ -1,6 +1,8 @@
 package org.qualv13.iotbackend.controller;
 
 import com.iot.backend.proto.IotProtos;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.qualv13.iotbackend.repository.LampMetricRepository;
 import org.qualv13.iotbackend.service.LampService;
 import org.qualv13.iotbackend.service.MqttService;
@@ -41,6 +43,8 @@ public class LampController {
     }
 
     // --- COMMAND (POST) ---
+    @Operation(summary = "Wyślij komendę (Protobuf)", description = "Wysyła natychmiastowe polecenie do urządzenia przez MQTT.")
+    @ApiResponse(responseCode = "200", description = "Komenda wysłana")
     @PostMapping(value = "/{lampId}/command", consumes = "application/x-protobuf")
     public ResponseEntity<Void> sendCommand(@PathVariable String lampId,
                                             @RequestBody IotProtos.LampCommand command) {

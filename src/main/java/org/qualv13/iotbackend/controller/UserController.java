@@ -1,5 +1,8 @@
 package org.qualv13.iotbackend.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.qualv13.iotbackend.dto.AddLampDto;
 import org.qualv13.iotbackend.dto.RegisterDto;
 import org.qualv13.iotbackend.entity.Lamp;
@@ -32,6 +35,11 @@ public class UserController {
     private final LampService lampService;
     private final LampRepository lampRepository;
 
+    @Operation(summary = "Rejestracja użytkownika", description = "Tworzy nowe konto w systemie. Login musi być unikalny.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Pomyślnie zarejestrowano"),
+            @ApiResponse(responseCode = "400", description = "Nazwa użytkownika jest już zajęta")
+    })
     @PostMapping
     public ResponseEntity<String> registerUser(@RequestBody RegisterDto dto) {
         // Check if user exists
@@ -51,6 +59,7 @@ public class UserController {
     }
 
     // Username change (PUT /users/me)
+    @Operation(summary = "Zmiana nazwy użytkownika", description = "Pozwala zalogowanemu użytkownikowi zmienić swój login.")
     @PutMapping("/me")
     public ResponseEntity<Void> updateUser(@RequestBody UpdateUserDto dto, Authentication auth) {
         User user = userRepository.findByUsername(auth.getName()).orElseThrow();
@@ -63,6 +72,11 @@ public class UserController {
     }
 
     // Change password (PUT /users/me/password)
+    @Operation(summary = "Zmiana hasła", description = "Wymaga podania starego hasła dla weryfikacji.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Hasło zmienione"),
+            @ApiResponse(responseCode = "400", description = "Stare hasło jest nieprawidłowe")
+    })
     @PutMapping("/me/password")
     public ResponseEntity<String> changePassword(@RequestBody ChangePasswordRequest request, Authentication auth) {
         User user = userRepository.findByUsername(auth.getName()).orElseThrow();
@@ -77,6 +91,7 @@ public class UserController {
     }
 
     // Delete account (DELETE /users/me)
+    @Operation(summary = "Usuwanie konta", description = "Trwale usuwa konto użytkownika. Lampy zostają odpięte (nieusunięte).")
     @DeleteMapping("/me")
     @Transactional
     public ResponseEntity<Void> deleteAccount(Authentication auth) {
@@ -95,6 +110,7 @@ public class UserController {
     }
 
     // Get lamps of user
+    @Operation(summary = "Pobierz moje lampy", description = "Zwraca listę lamp przypisanych do zalogowanego użytkownika.")
     @GetMapping("/me/lamps")
     public ResponseEntity<List<LampDto>> getMyLamps(Authentication authentication) {
         // Spring Security bring here UserDetails after JWT verification
@@ -115,6 +131,7 @@ public class UserController {
     }
 
     // Add lamp
+    @Operation(summary = "Przypisz lampę", description = "Przypisuje istniejącą lampę do konta użytkownika i generuje nowy Device Token.")
     @PostMapping("/me/lamps")
     public ResponseEntity<Map<String, String>> addLamp(@RequestBody AddLampDto dto, Authentication authentication) {
         // Metoda serwisu zwraca teraz String (token)
@@ -125,6 +142,11 @@ public class UserController {
     }
 
     // Delete lamp from account (DELETE /users/me/lamps/{lampId})
+    @Operation(summary = "Odepnij lampę", description = "Usuwa powiązanie lampy z użytkownikiem (lampa staje się niczyja).")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lampa odpięta"),
+            @ApiResponse(responseCode = "403", description = "Próba usunięcia cudzej lampy")
+    })
     @DeleteMapping("/me/lamps/{lampId}")
     public ResponseEntity<Void> removeLamp(@PathVariable String lampId, Authentication auth) {
         User user = userRepository.findByUsername(auth.getName()).orElseThrow();
