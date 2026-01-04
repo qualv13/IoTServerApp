@@ -2,6 +2,8 @@ package org.qualv13.iotbackend.controller;
 
 import com.iot.backend.proto.IotProtos;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.qualv13.iotbackend.repository.LampMetricRepository;
 import org.qualv13.iotbackend.service.LampService;
@@ -23,17 +25,33 @@ public class LampController {
     private final LampMetricRepository metricRepository; // Przeniesione do konstruktora (Lombok)
 
     // --- STATUS (GET) ---
+    @Operation(summary = "Pobierz status (Protobuf)", description = "Zwraca telemetrię urządzenia.")
+    @ApiResponse(
+            responseCode = "200",
+            description = "Dane binarne Protobuf (StatusReport)",
+            content = @Content(mediaType = "application/x-protobuf", schema = @Schema(type = "string", format = "binary"))
+    )
     @GetMapping(value = "/{lampId}/status", produces = "application/x-protobuf")
     public IotProtos.StatusReport getStatus(@PathVariable String lampId) {
         return lampService.getLampStatusReport(lampId);
     }
 
     // --- CONFIG (GET/PUT) ---
+    @Operation(summary = "Pobierz konfigurację (Protobuf)")
+    @ApiResponse(
+            responseCode = "200",
+            description = "Dane binarne Protobuf (LampConfig)",
+            content = @Content(mediaType = "application/x-protobuf", schema = @Schema(type = "string", format = "binary"))
+    )
     @GetMapping(value = "/{lampId}/config", produces = "application/x-protobuf")
     public IotProtos.LampConfig getConfig(@PathVariable String lampId) {
         return lampService.getLampConfig(lampId);
     }
 
+    @Operation(summary = "Zapisz konfigurację (Protobuf)",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    content = @Content(mediaType = "application/x-protobuf", schema = @Schema(type = "string", format = "binary"))
+            ))
     @PutMapping(value = "/{lampId}/config", consumes = "application/x-protobuf")
     public ResponseEntity<Void> setConfig(@PathVariable String lampId,
                                           @RequestBody IotProtos.LampConfig config) {
@@ -43,8 +61,10 @@ public class LampController {
     }
 
     // --- COMMAND (POST) ---
-    @Operation(summary = "Wyślij komendę (Protobuf)", description = "Wysyła natychmiastowe polecenie do urządzenia przez MQTT.")
-    @ApiResponse(responseCode = "200", description = "Komenda wysłana")
+    @Operation(summary = "Wyślij komendę (Protobuf)", description = "Wysyła natychmiastowe polecenie do urządzenia.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    content = @Content(mediaType = "application/x-protobuf", schema = @Schema(type = "string", format = "binary"))
+            ))    @ApiResponse(responseCode = "200", description = "Komenda wysłana")
     @PostMapping(value = "/{lampId}/command", consumes = "application/x-protobuf")
     public ResponseEntity<Void> sendCommand(@PathVariable String lampId,
                                             @RequestBody IotProtos.LampCommand command) {
@@ -54,6 +74,7 @@ public class LampController {
     }
 
     // --- METRICS (GET) ---
+    @Operation(summary = "Pobierz historię temperatur (JSON)", description = "Zwraca listę wartości jako JSON (tu Swagger działa normalnie).")
     @GetMapping("/{lampId}/metrics")
     public ResponseEntity<List<Double>> getMetrics(@PathVariable String lampId) {
         // ZMIANA: Parsujemy string "temp1,temp2" na double (bierzemy pierwszy)

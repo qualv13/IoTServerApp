@@ -2,6 +2,8 @@ package org.qualv13.iotbackend.controller;
 
 import com.iot.backend.proto.IotProtos;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.qualv13.iotbackend.dto.FleetDto;
@@ -95,7 +97,10 @@ public class FleetController {
     }
 
     // --- Control & PROTOBUF (for whole fleet) ---
-
+    @Operation(summary = "Wyślij config do floty (Protobuf)",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    content = @Content(mediaType = "application/x-protobuf", schema = @Schema(type = "string", format = "binary"))
+            ))
     @PutMapping(value = "/{fleetId}/config", consumes = "application/x-protobuf")
     @Transactional
     public ResponseEntity<Void> setFleetConfig(@PathVariable Long fleetId,
@@ -119,7 +124,10 @@ public class FleetController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Wyślij komendę do floty (Protobuf)", description = "Wysyła binarną komendę (np. ON/OFF) do wszystkich lamp w grupie przez MQTT.")
+    @Operation(summary = "Wyślij komendę do floty (Protobuf)",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    content = @Content(mediaType = "application/x-protobuf", schema = @Schema(type = "string", format = "binary"))
+            ))
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Komenda wysłana"),
             @ApiResponse(responseCode = "400", description = "Błąd dekodowania Protobuf")
@@ -152,6 +160,8 @@ public class FleetController {
     }
 
     // GET Config floty (uproszczony)
+    @Operation(summary = "Pobierz config floty (Protobuf)")
+    @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/x-protobuf", schema = @Schema(type = "string", format = "binary")))
     @GetMapping(value = "/{fleetId}/config", produces = "application/x-protobuf")
     public IotProtos.LampConfig getFleetConfig(@PathVariable Long fleetId) {
         return IotProtos.LampConfig.newBuilder()
@@ -163,6 +173,8 @@ public class FleetController {
     }
 
     // ZMIANA: Zwracamy StatusReport (agregacja jest trudna, zwracamy pusty)
+    @Operation(summary = "Pobierz status floty (Protobuf)")
+    @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/x-protobuf", schema = @Schema(type = "string", format = "binary")))
     @GetMapping(value = "/{fleetId}/status", produces = "application/x-protobuf")
     public IotProtos.StatusReport getFleetStatus(@PathVariable Long fleetId) {
         // Nowy StatusReport nie ma pola "isOn", więc zwracamy pusty obiekt
