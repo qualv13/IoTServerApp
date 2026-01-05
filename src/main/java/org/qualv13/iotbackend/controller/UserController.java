@@ -3,8 +3,8 @@ package org.qualv13.iotbackend.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import org.qualv13.iotbackend.dto.AddLampDto;
-import org.qualv13.iotbackend.dto.RegisterDto;
+import lombok.extern.slf4j.Slf4j;
+import org.qualv13.iotbackend.dto.*;
 import org.qualv13.iotbackend.entity.Lamp;
 import org.qualv13.iotbackend.entity.User;
 import org.qualv13.iotbackend.repository.LampRepository;
@@ -14,17 +14,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import org.qualv13.iotbackend.dto.LampDto;
 import org.springframework.security.core.Authentication;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.qualv13.iotbackend.dto.ChangePasswordRequest;
-import org.qualv13.iotbackend.dto.UpdateUserDto;
+
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
@@ -34,6 +33,22 @@ public class UserController {
     private final PasswordEncoder passwordEncoder;
     private final LampService lampService;
     private final LampRepository lampRepository;
+
+    @Operation(summary = "Pobierz mój profil (Check Token)", description = "Zwraca podstawowe dane zalogowanego użytkownika. Służy do weryfikacji ważności tokena przy starcie aplikacji.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Token jest ważny, zwraca profil"),
+            @ApiResponse(responseCode = "401", description = "Token wygasł lub jest nieprawidłowy - wymuś wylogowanie")
+    })
+    @GetMapping("/me")
+    public ResponseEntity<UserDto> getMyProfile(Authentication auth) {
+        User user = userRepository.findByUsername(auth.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        UserDto userDto = new UserDto();
+        userDto.setUsername(user.getUsername());
+        userDto.setId(Long.toString(user.getId()));
+
+        return ResponseEntity.ok(userDto);
+    }
 
     @Operation(summary = "Rejestracja użytkownika", description = "Tworzy nowe konto w systemie. Login musi być unikalny.")
     @ApiResponses(value = {
