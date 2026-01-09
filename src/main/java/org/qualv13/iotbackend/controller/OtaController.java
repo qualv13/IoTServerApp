@@ -28,7 +28,7 @@ public class OtaController {
         IotProtos.LampCommand command = IotProtos.LampCommand.newBuilder()
                 .setVersion(1)
                 .setTs(Instant.now().getEpochSecond())
-                .setDownloadOtaUpdateCommand(otaCmd) // <--- TO ZASTĘPUJE stare setType(OTA)
+                .setDownloadOtaUpdateCommand(otaCmd)
                 .build();
 
         // 3. Wysyłamy

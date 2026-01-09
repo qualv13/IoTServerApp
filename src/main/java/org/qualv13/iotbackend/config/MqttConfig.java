@@ -12,6 +12,8 @@ import org.springframework.integration.mqtt.outbound.MqttPahoMessageHandler;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
 
+import java.util.UUID;
+
 @Configuration
 public class MqttConfig {
 
@@ -47,8 +49,10 @@ public class MqttConfig {
     @ServiceActivator(inputChannel = "mqttOutboundChannel")
     public MqttPahoMessageHandler mqttOutbound() {
         // To jest ten Bean, którego brakowało!
+        String client = clientId + "-" + UUID.randomUUID().toString();
+
         MqttPahoMessageHandler messageHandler =
-                new MqttPahoMessageHandler(clientId, mqttClientFactory());
+                new MqttPahoMessageHandler(client, mqttClientFactory());
 
         messageHandler.setAsync(true);
         messageHandler.setDefaultTopic("test/topic");

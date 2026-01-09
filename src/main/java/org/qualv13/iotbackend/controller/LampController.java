@@ -74,7 +74,7 @@ public class LampController {
     }
 
     // --- METRICS (GET) ---
-    @Operation(summary = "Pobierz historię temperatur (JSON)", description = "Zwraca listę wartości jako JSON (tu Swagger działa normalnie).")
+    @Operation(summary = "Pobierz historię temperatur (JSON)", description = "Zwraca listę wartości jako JSON.")
     @GetMapping("/{lampId}/metrics")
     public ResponseEntity<List<Double>> getMetrics(@PathVariable String lampId) {
         // ZMIANA: Parsujemy string "temp1,temp2" na double (bierzemy pierwszy)

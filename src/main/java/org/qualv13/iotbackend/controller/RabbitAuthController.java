@@ -31,7 +31,16 @@ public class RabbitAuthController {
     public ResponseEntity<String> checkUser(@RequestParam("username") String username,
                                             @RequestParam("password") String password) { // password = token od lampy
 
-        if (username.equals(serverUsername)) { /* ... obsługa admina ... */ }
+        if (serverUsername != null && serverUsername.equals(username)) {
+            // Sprawdzamy czy hasło backendu zgadza się z tym w configu
+            if (serverPassword != null && serverPassword.equals(password)) {
+                log.info("AUTH SUCCESS: Backend service authenticated.");
+                return ResponseEntity.ok("allow");
+            } else {
+                log.warn("AUTH FAILED: Backend password mismatch.");
+                return ResponseEntity.status(403).body("deny");
+            }
+        }
 
         return lampRepository.findById(username)
                 .map(lamp -> {

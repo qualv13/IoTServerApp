@@ -8,7 +8,7 @@ Content-Type: application/json
 }
 
 ### 2. Logowanie (Pobranie tokena)
-POST http://localhost:8080/auth/login
+POST http://srv38.mikr.us:40142/auth/login
 Content-Type: application/json
 
 {

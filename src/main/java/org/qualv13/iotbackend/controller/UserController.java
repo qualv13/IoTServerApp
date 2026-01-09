@@ -6,7 +6,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.extern.slf4j.Slf4j;
 import org.qualv13.iotbackend.dto.*;
 import org.qualv13.iotbackend.entity.Lamp;
+import org.qualv13.iotbackend.entity.LampMetric;
 import org.qualv13.iotbackend.entity.User;
+import org.qualv13.iotbackend.repository.LampMetricRepository;
 import org.qualv13.iotbackend.repository.LampRepository;
 import org.qualv13.iotbackend.repository.UserRepository;
 import org.qualv13.iotbackend.service.LampService;
@@ -16,9 +18,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +37,9 @@ public class UserController {
     private final PasswordEncoder passwordEncoder;
     private final LampService lampService;
     private final LampRepository lampRepository;
+    private final LampMetricRepository metricRepository;
+
+    public record MessageResponse(String message) {}
 
     @Operation(summary = "Pobierz mój profil (Check Token)", description = "Zwraca podstawowe dane zalogowanego użytkownika. Służy do weryfikacji ważności tokena przy starcie aplikacji.")
     @ApiResponses(value = {
@@ -41,6 +48,7 @@ public class UserController {
     })
     @GetMapping("/me")
     public ResponseEntity<UserDto> getMyProfile(Authentication auth) {
+        log.info("GET /users/me");
         User user = userRepository.findByUsername(auth.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         UserDto userDto = new UserDto();
@@ -56,10 +64,12 @@ public class UserController {
             @ApiResponse(responseCode = "400", description = "Nazwa użytkownika jest już zajęta")
     })
     @PostMapping
-    public ResponseEntity<String> registerUser(@RequestBody RegisterDto dto) {
+    public ResponseEntity<MessageResponse> registerUser(@RequestBody RegisterDto dto) {
+        log.info("POST /users");
         // Check if user exists
         if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
-            return ResponseEntity.badRequest().body("Username already exists");
+            log.warn("Username already exists");
+            return ResponseEntity.badRequest().body(new MessageResponse("Username already exists"));
         }
 
         // Create user
@@ -69,14 +79,15 @@ public class UserController {
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
 
         userRepository.save(user);
-
-        return ResponseEntity.ok("User registered successfully");
+        log.info("Username registered successfully -> saved to database");
+        return ResponseEntity.ok(new MessageResponse("User registered successfully"));
     }
 
     // Username change (PUT /users/me)
     @Operation(summary = "Zmiana nazwy użytkownika", description = "Pozwala zalogowanemu użytkownikowi zmienić swój login.")
     @PutMapping("/me")
     public ResponseEntity<Void> updateUser(@RequestBody UpdateUserDto dto, Authentication auth) {
+        log.info("PUT /users/me");
         User user = userRepository.findByUsername(auth.getName()).orElseThrow();
         // Must be unique
         if (dto.getUsername() != null && !dto.getUsername().isEmpty()) {
@@ -93,16 +104,17 @@ public class UserController {
             @ApiResponse(responseCode = "400", description = "Stare hasło jest nieprawidłowe")
     })
     @PutMapping("/me/password")
-    public ResponseEntity<String> changePassword(@RequestBody ChangePasswordRequest request, Authentication auth) {
+    public ResponseEntity<MessageResponse> changePassword(@RequestBody ChangePasswordRequest request, Authentication auth) {
+        log.info("PUT /users/me/password");
         User user = userRepository.findByUsername(auth.getName()).orElseThrow();
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-            return ResponseEntity.badRequest().body("Incorrect current password");
+            return ResponseEntity.badRequest().body(new MessageResponse("Incorrect current password"));
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
-        return ResponseEntity.ok("Password changed");
+        return ResponseEntity.ok(new MessageResponse("Password changed"));
     }
 
     // Delete account (DELETE /users/me)
@@ -110,6 +122,7 @@ public class UserController {
     @DeleteMapping("/me")
     @Transactional
     public ResponseEntity<Void> deleteAccount(Authentication auth) {
+        log.info("DELETE /users/me");
         User user = userRepository.findByUsername(auth.getName()).orElseThrow();
 
         // Set lamp owner to null, don't delete them from database
@@ -128,18 +141,40 @@ public class UserController {
     @Operation(summary = "Pobierz moje lampy", description = "Zwraca listę lamp przypisanych do zalogowanego użytkownika.")
     @GetMapping("/me/lamps")
     public ResponseEntity<List<LampDto>> getMyLamps(Authentication authentication) {
+        log.info("GET /users/me/lamps");
         // Spring Security bring here UserDetails after JWT verification
         String username = authentication.getName();
 
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        LocalDateTime threshold = LocalDateTime.now().minusSeconds(120);
+
+//        List<LampDto> lamps = user.getLamps().stream()
+//                .map(lamp -> new LampDto(
+//                        lamp.getId(),
+//                        lamp.isOn(), // zamiast tego query do metrics, sprawdzamy JOINem kiedy ostatnia metryka i jeśli starsza niż 120 sekund, to uznajemy że jest offline
+//                        (lamp.getFleet() != null) ? lamp.getFleet().getId() : null
+//                ))
+//                .collect(Collectors.toList());
+
         List<LampDto> lamps = user.getLamps().stream()
-                .map(lamp -> new LampDto(
-                        lamp.getId(),
-                        lamp.isOn(),
-                        (lamp.getFleet() != null) ? lamp.getFleet().getId() : null
-                ))
+                .map(lamp -> {
+                    // 2. Pobieramy najnowszą metrykę dla danej lampy
+                    // Używamy findFirst... żeby pobrać tylko jeden rekord (najnowszy)
+                    Optional<LampMetric> lastMetric = metricRepository.findFirstByLampIdOrderByTimestampDesc(lamp.getId());
+
+                    // 3. Logika: Jeśli metryka istnieje I jest nowsza niż 120s temu -> ONLINE (true)
+                    boolean isOnline = lastMetric
+                            .map(m -> m.getTimestamp().isAfter(threshold))
+                            .orElse(false);
+
+                    return new LampDto(
+                            lamp.getId(),
+                            isOnline, // <--- Tutaj wstawiamy nasz wyliczony status
+                            (lamp.getFleet() != null) ? lamp.getFleet().getId() : null
+                    );
+                })
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(lamps);
@@ -149,9 +184,10 @@ public class UserController {
     @Operation(summary = "Przypisz lampę", description = "Przypisuje istniejącą lampę do konta użytkownika i generuje nowy Device Token.")
     @PostMapping("/me/lamps")
     public ResponseEntity<Map<String, String>> addLamp(@RequestBody AddLampDto dto, Authentication authentication) {
+        log.info("POST /users/me/lamps");
         // Metoda serwisu zwraca teraz String (token)
         String newToken = lampService.assignLampToUser(authentication.getName(), dto.getLampId());
-
+        log.info("Lamp Id: {}", dto.getLampId());
         // Zwracamy go w JSONie
         return ResponseEntity.ok(Collections.singletonMap("device_token", newToken));
     }
@@ -164,6 +200,7 @@ public class UserController {
     })
     @DeleteMapping("/me/lamps/{lampId}")
     public ResponseEntity<Void> removeLamp(@PathVariable String lampId, Authentication auth) {
+        log.info("DELETE /users/me/lamps/{lampId}");
         User user = userRepository.findByUsername(auth.getName()).orElseThrow();
 
         // Check if lamp is assigned to user

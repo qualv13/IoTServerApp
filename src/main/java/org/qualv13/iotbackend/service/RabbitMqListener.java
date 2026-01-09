@@ -6,6 +6,7 @@ import org.qualv13.iotbackend.config.RabbitConfig;
 import org.qualv13.iotbackend.entity.LampMetric;
 import org.qualv13.iotbackend.repository.LampMetricRepository;
 import lombok.RequiredArgsConstructor;
+import org.qualv13.iotbackend.repository.LampRepository;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.messaging.handler.annotation.Header;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 public class RabbitMqListener {
 
     private final LampMetricRepository metricRepository;
+    private final LampRepository lampRepository;
 
     @RabbitListener(queues = RabbitConfig.QUEUE_NAME)
     public void receiveMessage(byte[] payload,
@@ -35,6 +37,11 @@ public class RabbitMqListener {
             }
             String lampId = parts[1];
             String msgType = parts[2]; // np. "status"
+
+            if (!lampRepository.existsById(lampId)) {
+                log.warn("Otrzymano dane od nieznanej lampy: {}. Ignoruję.", lampId);
+                return;
+            }
 
             // Obsługa StatusReport (wcześniej metrics)
             if ("status".equals(msgType)) {
@@ -59,7 +66,11 @@ public class RabbitMqListener {
 
                 //System.out.println("Zapisano status dla lampy: " + lampId + ", Uptime: " + report.getUptimeSeconds());
                 log.info("Zapisano status dla lampy: {}, Uptime: {}", lampId, report.getUptimeSeconds());
-            }else{
+            } else if ("command".equals(msgType)) {
+                IotProtos.LampCommand command = IotProtos.LampCommand.parseFrom(payload);
+
+                log.info("Odebrano command: {}", command);
+            } else{
                 log.warn("Wiadomość przyszła, ale nie ma \"status\" :( ");
             }
 
