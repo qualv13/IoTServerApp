@@ -27,4 +27,17 @@ public interface LampMetricRepository extends JpaRepository<LampMetric, Long> {
             "WHERE innerM.lampId = m.lampId" +
             ")")
     List<Double> findLatestTemperaturesForLampIds(@Param("lampIds") List<String> lampIds);
+
+    // Zwraca: [Godzina (String), Średnia Temperatura (Double)]
+    // Grupuje wyniki z ostatnich 24h po godzinie.
+    @Query(value = """
+        SELECT to_char(m.timestamp, 'HH24:00') as hour_bucket, 
+               AVG(CAST(NULLIF(m.temperatures, '') AS DOUBLE PRECISION)) as avg_temp
+        FROM lamp_metrics m
+        WHERE m.lamp_id IN :lampIds
+          AND m.timestamp >= NOW() - INTERVAL '24 HOURS'
+        GROUP BY hour_bucket
+        ORDER BY hour_bucket
+        """, nativeQuery = true)
+    List<Object[]> getHourlyAverageTemperature(@Param("lampIds") List<String> lampIds);
 }

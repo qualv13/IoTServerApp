@@ -4,7 +4,7 @@ WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 # Budujemy plik .jar, pomijając testy (szybciej)
-RUN mvn clean package -DskipTests
+RUN mvn clean package -Dmaven.test.skip=true
 
 # Etap 2: Uruchamianie aplikacji (Lekki obraz JRE)
 FROM eclipse-temurin:17-jre-alpine
