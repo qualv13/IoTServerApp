@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.qualv13.iotbackend.repository.LampMetricRepository;
 import org.qualv13.iotbackend.service.LampService;
 import org.qualv13.iotbackend.service.MqttService;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/lamps")
 @RequiredArgsConstructor
@@ -33,6 +35,7 @@ public class LampController {
     )
     @GetMapping(value = "/{lampId}/status", produces = "application/x-protobuf")
     public IotProtos.StatusReport getStatus(@PathVariable String lampId) {
+        log.info("GET /lamps/{}/status", lampId);
         return lampService.getLampStatusReport(lampId);
     }
 
@@ -45,6 +48,7 @@ public class LampController {
     )
     @GetMapping(value = "/{lampId}/config", produces = "application/x-protobuf")
     public IotProtos.LampConfig getConfig(@PathVariable String lampId) {
+        log.info("GET lamps/{}/config", lampId);
         return lampService.getLampConfig(lampId);
     }
 
@@ -55,6 +59,7 @@ public class LampController {
     @PutMapping(value = "/{lampId}/config", consumes = "application/x-protobuf")
     public ResponseEntity<Void> setConfig(@PathVariable String lampId,
                                           @RequestBody IotProtos.LampConfig config) {
+        log.info("PUT /lamps/" + lampId + "/config");
         lampService.updateLampConfig(lampId, config);
         mqttService.sendConfigToLamp(lampId, config);
         return ResponseEntity.ok().build();
@@ -68,6 +73,7 @@ public class LampController {
     @PostMapping(value = "/{lampId}/command", consumes = "application/x-protobuf")
     public ResponseEntity<Void> sendCommand(@PathVariable String lampId,
                                             @RequestBody IotProtos.LampCommand command) {
+        log.info("POST /lamps/{}/command", lampId);
         lampService.updateLampStateFromCommand(lampId, command);
         mqttService.sendCommandToLamp(lampId, command);
         return ResponseEntity.ok().build();
@@ -77,21 +83,25 @@ public class LampController {
     @Operation(summary = "Pobierz historię temperatur (JSON)", description = "Zwraca listę wartości jako JSON.")
     @GetMapping("/{lampId}/metrics")
     public ResponseEntity<List<Double>> getMetrics(@PathVariable String lampId) {
-        // ZMIANA: Parsujemy string "temp1,temp2" na double (bierzemy pierwszy)
+        log.info("GET /lamps/" + lampId + "/metrics");
         List<Double> values = metricRepository.findTop100ByLampIdOrderByTimestampDesc(lampId)
                 .stream()
                 .map(metric -> {
-                    String temps = metric.getTemperatures();
-                    if (temps == null || temps.isEmpty()) return 0.0;
+                    String tempStr = metric.getTemperatures();
+
+                    if (tempStr == null || tempStr.isBlank()) {
+                        return 0.0;
+                    }
+
                     try {
-                        // Bierzemy pierwszą temperaturę z listy
-                        String firstTemp = temps.split(",")[0];
-                        return Double.parseDouble(firstTemp);
-                    } catch (Exception e) {
+                        return Double.parseDouble(tempStr);
+                    } catch (NumberFormatException e) {
+                        log.warn("Coś poszło nie tak z parsowaniem temperatur GET lamps/id/metrics");
                         return 0.0;
                     }
                 })
                 .toList();
+
         return ResponseEntity.ok(values);
     }
 }

@@ -145,20 +145,19 @@ public class UserController {
         // Spring Security bring here UserDetails after JWT verification
         String username = authentication.getName();
 
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
         LocalDateTime threshold = LocalDateTime.now().minusSeconds(120);
 
-//        List<LampDto> lamps = user.getLamps().stream()
-//                .map(lamp -> new LampDto(
-//                        lamp.getId(),
-//                        lamp.isOn(), // zamiast tego query do metrics, sprawdzamy JOINem kiedy ostatnia metryka i jeśli starsza niż 120 sekund, to uznajemy że jest offline
-//                        (lamp.getFleet() != null) ? lamp.getFleet().getId() : null
-//                ))
-//                .collect(Collectors.toList());
+        List<Lamp> lampsToProcess;
 
-        List<LampDto> lamps = user.getLamps().stream()
+        if ("admin".equals(username)) {
+            lampsToProcess = lampRepository.findAll();
+        } else {
+            User user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            lampsToProcess = user.getLamps();
+        }
+
+        List<LampDto> lamps = lampsToProcess.stream()
                 .map(lamp -> {
                     // 2. Pobieramy najnowszą metrykę dla danej lampy
                     // Używamy findFirst... żeby pobrać tylko jeden rekord (najnowszy)

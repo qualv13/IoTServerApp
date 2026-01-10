@@ -41,23 +41,23 @@ public class MqttService {
         sendBytes("lamps/" + lampId + "/command", command.toByteArray());
     }
 
-    // ==========================================
-    //                  FLOTY
-    // ==========================================
-
-    /**
-     * Wysyła konfigurację do całej floty.
-     * Lampy muszą subskrybować temat: fleets/{fleetId}/config
-     */
-    public void sendConfigToFleet(Long fleetId, IotProtos.LampConfig config) {
-        sendBytes("fleets/" + fleetId + "/config", config.toByteArray());
-    }
-
-    /**
-     * Wysyła komendę do całej floty.
-     * Lampy muszą subskrybować temat: fleets/{fleetId}/command
-     */
-    public void sendCommandToFleet(Long fleetId, IotProtos.LampCommand command) {
-        sendBytes("fleets/" + fleetId + "/command", command.toByteArray());
-    }
+//    // ==========================================
+//    //                  FLOTY
+//    // ==========================================
+//
+//    /**
+//     * Wysyła konfigurację do całej floty.
+//     * Lampy muszą subskrybować temat: fleets/{fleetId}/config
+//     */
+//    public void sendConfigToFleet(Long fleetId, IotProtos.LampConfig config) {
+//        sendBytes("fleets/" + fleetId + "/config", config.toByteArray());
+//    }
+//
+//    /**
+//     * Wysyła komendę do całej floty.
+//     * Lampy muszą subskrybować temat: fleets/{fleetId}/command
+//     */
+//    public void sendCommandToFleet(Long fleetId, IotProtos.LampCommand command) {
+//        sendBytes("fleets/" + fleetId + "/command", command.toByteArray());
+//    }
 }

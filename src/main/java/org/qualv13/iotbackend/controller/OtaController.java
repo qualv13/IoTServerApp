@@ -1,6 +1,8 @@
 package org.qualv13.iotbackend.controller;
 
 import com.iot.backend.proto.IotProtos;
+import lombok.extern.slf4j.Slf4j;
+import org.qualv13.iotbackend.repository.LampRepository;
 import org.qualv13.iotbackend.service.MqttService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -8,17 +10,19 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 
+@Slf4j
 @RestController
 @RequestMapping("/ota")
 @RequiredArgsConstructor
 public class OtaController {
 
     private final MqttService mqttService;
+    private final LampRepository lampRepository;
 
     // Przykład endpointu do aktualizacji pojedynczej lampy
     @PostMapping("/lamps/{lampId}")
     public ResponseEntity<Void> updateLamp(@PathVariable String lampId, @RequestParam String url) {
-
+        log.info("POST /ota/lamps/{} for url {}", lampId, url);
         // 1. Budujemy komendę OTA
         IotProtos.DownloadOtaUpdateCommand otaCmd = IotProtos.DownloadOtaUpdateCommand.newBuilder()
                 .setOtaUrl(url)
@@ -40,7 +44,7 @@ public class OtaController {
     // Przykład endpointu do aktualizacji FLOTY
     @PostMapping("/fleets/{fleetId}")
     public ResponseEntity<Void> updateFleet(@PathVariable Long fleetId, @RequestParam String url) {
-
+        log.info("POST /ota/fleets/{} for url {}", fleetId, url);
         IotProtos.DownloadOtaUpdateCommand otaCmd = IotProtos.DownloadOtaUpdateCommand.newBuilder()
                 .setOtaUrl(url)
                 .build();
@@ -51,7 +55,10 @@ public class OtaController {
                 .setDownloadOtaUpdateCommand(otaCmd)
                 .build();
 
-        mqttService.sendCommandToFleet(fleetId, command);
+        lampRepository.findAll().forEach(lamp -> {
+            mqttService.sendCommandToLamp(lamp.getId(), command);
+        });
+        //mqttService.sendCommandToFleet(fleetId, command);
 
         return ResponseEntity.ok().build();
     }

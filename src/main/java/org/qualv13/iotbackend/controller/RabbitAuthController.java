@@ -51,6 +51,7 @@ public class RabbitAuthController {
                     if (lamp.getDeviceTokenHash() != null && lamp.getDeviceTokenHash().equals(incomingTokenHash)) {
                         return ResponseEntity.ok("allow");
                     }
+                    log.warn("AUTH RABBIT FAILED: For user {}.", username);
                     return ResponseEntity.status(403).body("deny");
                 })
                 .orElse(ResponseEntity.status(403).body("deny"));

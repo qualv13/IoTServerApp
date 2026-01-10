@@ -60,6 +60,6 @@ public class RabbitConfig {
     // (W MQTT # to wildcard wielopoziomowy)
     @Bean
     public Binding binding(Queue queue, TopicExchange exchange) {
-        return BindingBuilder.bind(queue).to(exchange).with("lamps.#");
+        return BindingBuilder.bind(queue).to(exchange).with("lamps.*.status");
     }
 }

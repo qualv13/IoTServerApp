@@ -1,5 +1,6 @@
 package org.qualv13.iotbackend.controller;
 
+import lombok.extern.slf4j.Slf4j;
 import org.qualv13.iotbackend.dto.AuthResponse;
 import org.qualv13.iotbackend.dto.LoginRequest;
 import org.qualv13.iotbackend.entity.User;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;import org.qualv13.iotbackend.d
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 
+@Slf4j
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -25,6 +27,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
+        log.info("POST /auth/login");
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getUsername(),
@@ -45,6 +48,7 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(@RequestBody RefreshTokenRequest request) {
+        log.info("POST /auth/refresh");
         String refreshToken = request.getRefreshToken();
         String username = jwtService.extractUsername(refreshToken);
 

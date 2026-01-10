@@ -71,7 +71,7 @@ public class RabbitMqListener {
 
                 log.info("Odebrano command: {}", command);
             } else{
-                log.warn("Wiadomość przyszła, ale nie ma \"status\" :( ");
+                log.warn("Wiadomość przyszła, ale nie ma \"status\" :(  {}", msgType);
             }
 
         } catch (Exception e) {

@@ -12,7 +12,19 @@ public interface LampMetricRepository extends JpaRepository<LampMetric, Long> {
 
     List<LampMetric> findTop100ByLampIdOrderByTimestampDesc(String lampId);
     Optional<LampMetric> findFirstByLampIdOrderByTimestampDesc(String lampId);
-    // NOWE: Oblicz średnią wartość dla podanej listy ID lamp
-//    @Query("SELECT AVG(m.value) FROM LampMetric m WHERE m.lamp.id IN :lampIds")
-//    Double getAverageValueForLamps(@Param("lampIds") List<String> lampIds);
+
+    Double getLampMetricByLampIdOrderByTimestampDesc(String lampId);
+
+    /**
+     * Pobiera najnowszy string 'temperatures' dla każdej lampy z podanej listy ID.
+     * Wybiera te metryki, których timestamp jest równy maksymalnemu timestampowi dla danego lampId.
+     */
+    @Query("SELECT m.temperatures FROM LampMetric m " +
+            "WHERE m.lampId IN :lampIds " +
+            "AND m.timestamp = (" +
+            "SELECT MAX(innerM.timestamp) " +
+            "FROM LampMetric innerM " +
+            "WHERE innerM.lampId = m.lampId" +
+            ")")
+    List<Double> findLatestTemperaturesForLampIds(@Param("lampIds") List<String> lampIds);
 }
