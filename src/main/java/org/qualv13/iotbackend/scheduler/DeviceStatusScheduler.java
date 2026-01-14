@@ -40,6 +40,7 @@ public class DeviceStatusScheduler {
                             lamp.setOn(true);
                             log.info("Lampa {} świeci", lamp.getId());
                         }
+                        lampRepository.save(lamp);
                     }
                 });
 
