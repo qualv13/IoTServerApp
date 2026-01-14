@@ -26,7 +26,7 @@ public class FleetService {
                 .orElseThrow(() -> new RuntimeException("Fleet not found"));
 
         return fleet.getLamps().stream()
-                .map(l -> new LampDto(l.getId(), l.isOn(), l.getFleet().getId()))
+                .map(l -> new LampDto(l.getId(), l.isOn(), l.isOnline(), l.getFleet().getId()))
                 .collect(Collectors.toList());
     }
 

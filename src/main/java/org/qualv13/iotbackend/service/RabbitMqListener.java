@@ -38,6 +38,14 @@ public class RabbitMqListener {
             String lampId = parts[1];
             String msgType = parts[2]; // np. "status"
 
+            lampRepository.findById(lampId).ifPresent(lamp -> {
+                if (!lamp.isOnline()) {
+                    lamp.setOnline(true);
+                    lampRepository.save(lamp);
+                    log.info("Lampa {} jest teraz ONLINE", lampId);
+                }
+            });
+
             if (!lampRepository.existsById(lampId)) {
                 log.warn("Otrzymano dane od nieznanej lampy: {}. Ignoruję.", lampId);
                 return;

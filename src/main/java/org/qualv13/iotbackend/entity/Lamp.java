@@ -35,6 +35,9 @@ public class Lamp {
     @Column(name = "is_on")
     private boolean isOn = false;
 
+    @Column(name = "is_online")
+    private boolean isOnline = false;
+
     // Przechowujemy JSON z listą trybów (do 10 slotów)
     // TEXT pozwala na zapisanie długiego JSON-a
     @Column(columnDefinition = "TEXT")

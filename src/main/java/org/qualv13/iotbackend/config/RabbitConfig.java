@@ -12,14 +12,10 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitConfig {
 
-    @Value("${mqtt.username}")
-    private String username;
-    @Value("${mqtt.password}")
-    private String password;
-    @Value("${mqtt.host:rabbitmq-mqtt-kierzno}")
-    private String host;
-    @Value("${mqtt.port:5672}")
-    private String port;
+    @Value("${mqtt.username}") private String username;
+    @Value("${mqtt.password}") private String password;
+    @Value("${mqtt.host:rabbitmq-mqtt-kierzno}") private String host;
+    @Value("${mqtt.port:5672}") private String port;
     //@Value("${mqtt.virtualhost}")
     //private String virtualHost;
 

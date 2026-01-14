@@ -170,7 +170,8 @@ public class UserController {
 
                     return new LampDto(
                             lamp.getId(),
-                            isOnline, // <--- Tutaj wstawiamy nasz wyliczony status
+                            lamp.isOn(), // <--- Tutaj wstawiamy nasz wyliczony status
+                            lamp.isOnline(),
                             (lamp.getFleet() != null) ? lamp.getFleet().getId() : null
                     );
                 })
@@ -204,6 +205,12 @@ public class UserController {
 
         // Check if lamp is assigned to user
         Lamp lamp = lampRepository.findById(lampId).orElseThrow();
+
+        if(auth.getName().equals("admin")) {
+            lampRepository.delete(lamp);
+            return ResponseEntity.ok().build();
+        }
+
         if (lamp.getOwner() != null && lamp.getOwner().getId().equals(user.getId())) {
             lamp.setOwner(null);
             lampRepository.save(lamp);
