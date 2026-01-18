@@ -2,10 +2,12 @@ package org.qualv13.iotbackend.service;
 
 import com.iot.backend.proto.IotProtos;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.integration.mqtt.outbound.MqttPahoMessageHandler;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MqttService {
@@ -39,6 +41,21 @@ public class MqttService {
      */
     public void sendCommandToLamp(String lampId, IotProtos.LampCommand command) {
         sendBytes("lamps/" + lampId + "/command", command.toByteArray());
+    }
+
+    public void sendRegistrationToken(String lampId, String token) {
+        IotProtos.RegisterLampCommand regCmd = IotProtos.RegisterLampCommand.newBuilder()
+                .setToken(token)
+                .build();
+
+        IotProtos.LampCommand command = IotProtos.LampCommand.newBuilder()
+                .setVersion(1)
+                .setTs(System.currentTimeMillis() / 1000)
+                .setRegisterLampCommand(regCmd) // Ustawiamy oneof
+                .build();
+
+        sendBytes("lamps/" + lampId + "/command", command.toByteArray());
+        log.info("Wysłano token rejestracyjny do lampy: {}", lampId);
     }
 
 //    // ==========================================

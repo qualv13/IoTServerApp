@@ -1,8 +1,10 @@
 package org.qualv13.iotbackend.service;
 
 import org.qualv13.iotbackend.dto.DetailedStatsDto;
+import org.qualv13.iotbackend.dto.LampHistoryDto;
 import org.qualv13.iotbackend.entity.Fleet;
 import org.qualv13.iotbackend.entity.Lamp;
+import org.qualv13.iotbackend.entity.LampMetric;
 import org.qualv13.iotbackend.entity.User;
 import org.qualv13.iotbackend.repository.FleetRepository;
 import org.qualv13.iotbackend.repository.LampMetricRepository;
@@ -11,6 +13,7 @@ import org.qualv13.iotbackend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -124,9 +127,39 @@ public class StatsService {
     }
 
     // Metoda dla pojedynczej lampy (pozostaje bez zmian lub można użyć logiki powyżej)
-    public Map<String, Object> getSingleLampHistory(String lampId) {
-        // ... (stara implementacja dla modala) ...
-        return Collections.emptyMap(); // Tu wstaw starą logikę jeśli potrzebujesz endpointu /lamps/{id}/history
+    public LampHistoryDto getSingleLampHistory(String lampId) {
+        // 1. Pobierz 100 ostatnich wpisów
+        List<LampMetric> metrics = metricRepository.findTop100ByLampIdOrderByTimestampDesc(lampId);
+
+        // 2. Odwróć kolejność (chronologicznie: stare -> nowe)
+        Collections.reverse(metrics);
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+
+        // 3. Mapowanie danych
+        List<String> labels = metrics.stream()
+                .map(m -> m.getTimestamp().format(formatter))
+                .toList();
+
+        List<Double> temps = metrics.stream().map(m -> {
+            try {
+                String tempStr = m.getTemperatures();
+                if (tempStr == null || tempStr.isEmpty()) return 0.0;
+                // Zakładamy, że interesuje nas pierwszy czujnik
+                return Double.parseDouble(tempStr.split(",")[0].trim());
+            } catch (Exception e) {
+                return 0.0;
+            }
+        }).toList();
+
+        // Pobieramy uptime z OSTATNIEGO (najnowszego) pomiaru w liście
+        Long uptime = metrics.isEmpty() ? 0L : metrics.get(metrics.size() - 1).getUptimeSeconds();
+
+        return LampHistoryDto.builder()
+                .labels(labels)
+                .temperatures(temps)
+                .currentUptime(uptime)
+                .build();
     }
 }
 

@@ -42,6 +42,10 @@ public class DeviceStatusScheduler {
                         }
                         lampRepository.save(lamp);
                     }
+                    if(!lamp.isOnline()) {
+                        lamp.setOn(false);
+                        lampRepository.save(lamp);
+                    }
                 });
 
 

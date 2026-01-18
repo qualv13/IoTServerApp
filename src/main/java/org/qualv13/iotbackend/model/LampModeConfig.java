@@ -1,4 +1,4 @@
-package org.qualv13.iotbackend.config;
+package org.qualv13.iotbackend.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

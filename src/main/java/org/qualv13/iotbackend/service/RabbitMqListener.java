@@ -3,6 +3,7 @@ package org.qualv13.iotbackend.service;
 import com.iot.backend.proto.IotProtos;
 import lombok.extern.slf4j.Slf4j;
 import org.qualv13.iotbackend.config.RabbitConfig;
+import org.qualv13.iotbackend.entity.Lamp;
 import org.qualv13.iotbackend.entity.LampMetric;
 import org.qualv13.iotbackend.repository.LampMetricRepository;
 import lombok.RequiredArgsConstructor;
@@ -53,9 +54,21 @@ public class RabbitMqListener {
 
             // Obsługa StatusReport (wcześniej metrics)
             if ("status".equals(msgType)) {
+                Lamp lampEntity = lampRepository.findById(lampId).orElse(null);
+                if (lampEntity == null) { return; }
+
+                if (!lampEntity.isOnline()) {
+                    lampEntity.setOnline(true);
+                }
 
                 // 1. Parsowanie nowego Proto
                 IotProtos.StatusReport report = IotProtos.StatusReport.parseFrom(payload);
+
+                // Zapisujemy odczyty do encji (dla Schedulera)
+                lampEntity.setLastAmbientLight(report.getAmbientLight());
+                lampEntity.setLastAmbientNoise(report.getAmbientNoise());
+                lampEntity.setOnline(true); // Przy okazji odświeżamy status
+                lampRepository.save(lampEntity);
 
                 // 2. Mapowanie na bazę danych
                 LampMetric metric = new LampMetric();
@@ -63,6 +76,8 @@ public class RabbitMqListener {
                 metric.setTimestamp(LocalDateTime.now());
                 metric.setDeviceTimestamp(report.getTs());
                 metric.setUptimeSeconds(report.getUptimeSeconds());
+                metric.setAmbientLight(report.getAmbientLight());
+                metric.setAmbientNoise(report.getAmbientNoise());
 
                 // Konwersja listy temperatur na String "20,21,22"
                 String tempStr = report.getTemperatureReadingsList().stream()

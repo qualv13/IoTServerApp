@@ -42,7 +42,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         final String jwt = authHeader.substring(7);
-        System.out.println("Token found: " + jwt.substring(0, 10) + "..."); // Show part of token
+        // Show part of token for debugging (only if token is long enough)
+        if (jwt.length() > 10) {
+            System.out.println("Token found: " + jwt.substring(0, 10) + "...");
+        } else {
+            System.out.println("Token found: " + jwt + " (short token)");
+        }
 
         try {
             final String userEmail = jwtService.extractUsername(jwt);
@@ -66,9 +71,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception e) {
-            // JWT errors (expired token)
-            System.out.println("BŁĄD WERYFIKACJI TOKENA: " + e.getMessage());
-            e.printStackTrace();
+            // 2. TUTAJ JEST ZMIANA:
+            // Jeśli token jest nieprawidłowy (np. wygasł), NIE puszczamy żądania dalej.
+            // Zwracamy natychmiast błąd 403 Forbidden.
+
+            System.out.println("BŁĄD WERYFIKACJI TOKENA (Zwracam 403): " + e.getMessage());
+
+            // Ustawiamy status 403
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\": \"Token expired or invalid\"}");
+
+            // Ważne: RETURN, aby nie wykonać filterChain.doFilter() na dole
+            //return;
         }
 
         System.out.println("--- END FILTER DEBUG ---");

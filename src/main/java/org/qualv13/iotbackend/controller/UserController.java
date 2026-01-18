@@ -19,10 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -141,43 +138,59 @@ public class UserController {
     @Operation(summary = "Pobierz moje lampy", description = "Zwraca listę lamp przypisanych do zalogowanego użytkownika.")
     @GetMapping("/me/lamps")
     public ResponseEntity<List<LampDto>> getMyLamps(Authentication authentication) {
-        log.info("GET /users/me/lamps");
-        // Spring Security bring here UserDetails after JWT verification
-        String username = authentication.getName();
+        // log.info("GET /users/me/lamps");
+        try {
+            String username = authentication.getName();
+            LocalDateTime threshold = LocalDateTime.now().minusSeconds(15);
+            List<Lamp> lampsToProcess;
 
-        LocalDateTime threshold = LocalDateTime.now().minusSeconds(120);
+            if ("admin".equals(username)) {
+                lampsToProcess = lampRepository.findAll();
+            } else {
+                User user = userRepository.findByUsername(username).orElse(null);
+                if (user == null) return ResponseEntity.ok(Collections.emptyList());
+                lampsToProcess = user.getLamps();
+            }
 
-        List<Lamp> lampsToProcess;
+            if (lampsToProcess == null || lampsToProcess.isEmpty()) {
+                return ResponseEntity.ok(Collections.emptyList());
+            }
 
-        if ("admin".equals(username)) {
-            lampsToProcess = lampRepository.findAll();
-        } else {
-            User user = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-            lampsToProcess = user.getLamps();
-        }
+            List<LampDto> result = new ArrayList<>();
 
-        List<LampDto> lamps = lampsToProcess.stream()
-                .map(lamp -> {
-                    // 2. Pobieramy najnowszą metrykę dla danej lampy
-                    // Używamy findFirst... żeby pobrać tylko jeden rekord (najnowszy)
-                    Optional<LampMetric> lastMetric = metricRepository.findFirstByLampIdOrderByTimestampDesc(lamp.getId());
+            for (Lamp lamp : lampsToProcess) {
+                try {
+                    boolean isOnline = false;
 
-                    // 3. Logika: Jeśli metryka istnieje I jest nowsza niż 120s temu -> ONLINE (true)
-                    boolean isOnline = lastMetric
-                            .map(m -> m.getTimestamp().isAfter(threshold))
-                            .orElse(false);
+                    // Bezpieczne pobieranie metryki
+                    if (lamp.getId() != null) {
+                        Optional<LampMetric> lastMetric = metricRepository.findFirstByLampIdOrderByTimestampDesc(lamp.getId());
+                        if (lastMetric.isPresent() && lastMetric.get().getTimestamp() != null) {
+                            isOnline = lastMetric.get().getTimestamp().isAfter(threshold);
+                        }
+                    }
 
-                    return new LampDto(
+                    Long fleetId = (lamp.getFleet() != null) ? lamp.getFleet().getId() : null;
+
+                    result.add(new LampDto(
                             lamp.getId(),
-                            lamp.isOn(), // <--- Tutaj wstawiamy nasz wyliczony status
-                            lamp.isOnline(),
-                            (lamp.getFleet() != null) ? lamp.getFleet().getId() : null
-                    );
-                })
-                .collect(Collectors.toList());
+                            lamp.isOn(),
+                            isOnline,
+                            fleetId
+                    ));
+                } catch (Exception e) {
+                    log.error("Skipping lamp {} due to error: {}", lamp.getId(), e.getMessage());
+                    // Skipujemy uszkodzoną lampę, ale zwracamy resztę listy!
+                }
+            }
 
-        return ResponseEntity.ok(lamps);
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+            log.error("CRITICAL /users/me/lamps: {}", e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     // Add lamp
@@ -185,10 +198,8 @@ public class UserController {
     @PostMapping("/me/lamps")
     public ResponseEntity<Map<String, String>> addLamp(@RequestBody AddLampDto dto, Authentication authentication) {
         log.info("POST /users/me/lamps");
-        // Metoda serwisu zwraca teraz String (token)
         String newToken = lampService.assignLampToUser(authentication.getName(), dto.getLampId());
         log.info("Lamp Id: {}", dto.getLampId());
-        // Zwracamy go w JSONie
         return ResponseEntity.ok(Collections.singletonMap("device_token", newToken));
     }
 

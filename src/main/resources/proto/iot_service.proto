@@ -8,6 +8,9 @@ message StatusReport {
   int64 ts = 2;
   uint32 uptime_seconds = 3;
   repeated uint32 temperature_readings = 4;
+  uint32 ambient_light = 5;
+  uint32 ambient_noise = 6;
+  DirectSettings led_settings = 7;
 }
 
 message DirectSettings {
@@ -95,6 +98,7 @@ message ModeCombinedSetting {
 
 message InternalLampConfig {
   uint32 reporting_interval_seconds = 1;
+  uint32 wake_up_interval_minutes = 2;
 }
 
 message LampConfig {
@@ -135,6 +139,10 @@ message DownloadOtaUpdateCommand {
   string ota_url = 1;
 }
 
+message RegisterLampCommand {
+  string token = 1;
+}
+
 
 message LampCommand {
   uint32 version = 1; // current command version: 1
@@ -148,5 +156,6 @@ message LampCommand {
     SetMode set_mode_command = 8;
     RebootCommand reboot_command = 9;
     DownloadOtaUpdateCommand download_ota_update_command = 10;
+    RegisterLampCommand register_lamp_command = 11;
   }
 }

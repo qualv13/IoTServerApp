@@ -24,6 +24,12 @@ public class LampMetric {
     // Przechowamy listę temperatur jako prosty String (np. "25,26,27")
     // Żeby nie tworzyć osobnej tabeli dla kilku liczb.
     private String temperatures;
+
+    @Column(name = "ambient_light")
+    private Integer ambientLight;
+
+    @Column(name = "ambient_noise")
+    private Integer ambientNoise;
 }
 
 

@@ -2,6 +2,7 @@ package org.qualv13.iotbackend.controller;
 
 import lombok.extern.slf4j.Slf4j;
 import org.qualv13.iotbackend.dto.DetailedStatsDto;
+import org.qualv13.iotbackend.dto.LampHistoryDto;
 import org.qualv13.iotbackend.dto.StatsDto;
 import org.qualv13.iotbackend.service.StatsService;
 import lombok.RequiredArgsConstructor;
@@ -57,7 +58,7 @@ public class StatsController {
 
     // Historia pojedynczej lampy (do wykresu na modalu)
     @GetMapping("/lamps/{lampId}/history")
-    public ResponseEntity<Map<String, Object>> getLampHistory(@PathVariable String lampId) {
+    public ResponseEntity<LampHistoryDto> getLampHistory(@PathVariable String lampId) {
         return ResponseEntity.ok(statsService.getSingleLampHistory(lampId));
     }
 }

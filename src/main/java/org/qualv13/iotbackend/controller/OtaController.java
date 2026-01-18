@@ -6,6 +6,7 @@ import org.qualv13.iotbackend.repository.LampRepository;
 import org.qualv13.iotbackend.service.MqttService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -21,8 +22,14 @@ public class OtaController {
 
     // Przykład endpointu do aktualizacji pojedynczej lampy
     @PostMapping("/lamps/{lampId}")
-    public ResponseEntity<Void> updateLamp(@PathVariable String lampId, @RequestParam String url) {
+    public ResponseEntity<Void> updateLamp(@PathVariable String lampId, @RequestParam String url, Authentication auth) {
         log.info("POST /ota/lamps/{} for url {}", lampId, url);
+        
+        // Admin only check
+        if (!"admin".equals(auth.getName())) {
+            return ResponseEntity.status(403).build();
+        }
+        
         // 1. Budujemy komendę OTA
         IotProtos.DownloadOtaUpdateCommand otaCmd = IotProtos.DownloadOtaUpdateCommand.newBuilder()
                 .setOtaUrl(url)
@@ -43,8 +50,14 @@ public class OtaController {
 
     // Przykład endpointu do aktualizacji FLOTY
     @PostMapping("/fleets/{fleetId}")
-    public ResponseEntity<Void> updateFleet(@PathVariable Long fleetId, @RequestParam String url) {
+    public ResponseEntity<Void> updateFleet(@PathVariable Long fleetId, @RequestParam String url, Authentication auth) {
         log.info("POST /ota/fleets/{} for url {}", fleetId, url);
+        
+        // Admin only check
+        if (!"admin".equals(auth.getName())) {
+            return ResponseEntity.status(403).build();
+        }
+        
         IotProtos.DownloadOtaUpdateCommand otaCmd = IotProtos.DownloadOtaUpdateCommand.newBuilder()
                 .setOtaUrl(url)
                 .build();
@@ -59,6 +72,31 @@ public class OtaController {
             mqttService.sendCommandToLamp(lamp.getId(), command);
         });
         //mqttService.sendCommandToFleet(fleetId, command);
+
+        return ResponseEntity.ok().build();
+    }
+
+    // Nowy endpoint: OTA dla wszystkich lamp (bez floty)
+    @PostMapping("/lamps")
+    public ResponseEntity<Void> updateAllLamps(@RequestParam String url, Authentication auth) {
+        log.info("POST /ota/lamps (ALL) for url {}", url);
+
+        // Admin only check
+        if (!"admin".equals(auth.getName())) {
+            return ResponseEntity.status(403).build();
+        }
+
+        IotProtos.DownloadOtaUpdateCommand otaCmd = IotProtos.DownloadOtaUpdateCommand.newBuilder()
+                .setOtaUrl(url)
+                .build();
+
+        IotProtos.LampCommand command = IotProtos.LampCommand.newBuilder()
+                .setVersion(1)
+                .setTs(Instant.now().getEpochSecond())
+                .setDownloadOtaUpdateCommand(otaCmd)
+                .build();
+
+        lampRepository.findAll().forEach(lamp -> mqttService.sendCommandToLamp(lamp.getId(), command));
 
         return ResponseEntity.ok().build();
     }

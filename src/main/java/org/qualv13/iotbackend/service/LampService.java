@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iot.backend.proto.IotProtos;
 import org.qualv13.iotbackend.entity.Lamp;
 import org.qualv13.iotbackend.entity.User;
-import org.qualv13.iotbackend.model.LampModeConfig;
+import org.qualv13.iotbackend.config.LampModeConfig;
 import org.qualv13.iotbackend.repository.LampMetricRepository;
 import org.qualv13.iotbackend.repository.LampRepository;
 import org.qualv13.iotbackend.repository.UserRepository;
@@ -19,6 +19,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -33,7 +34,9 @@ public class LampService {
     public String assignLampToUser(String username, String lampId) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        Lamp lamp = lampRepository.findById(lampId).orElse(new Lamp());
+        Lamp lamp = lampRepository.findById(lampId).orElse(
+                new Lamp());
+
 
         if (lamp.getOwner() != null && !lamp.getOwner().getUsername().equals(username)) {
             lamp.setModesConfigJson(null); // Reset configu przy zmianie właściciela
@@ -65,6 +68,12 @@ public class LampService {
             IotProtos.DirectSettings ds = command.getSetDirectSettingsCommand().getDirectSettings();
             String hexColor = String.format("#%02x%02x%02x", ds.getRed(), ds.getGreen(), ds.getBlue());
             lamp.setColor(hexColor);
+            lamp.setRed(ds.getRed());
+            lamp.setGreen(ds.getGreen());
+            lamp.setBlue(ds.getBlue());
+            lamp.setWarmWhite(ds.getWarmWhite());
+            lamp.setNeutralWhite(ds.getNeutralWhite());
+            lamp.setColdWhite(ds.getColdWhite());
             lamp.setActiveModeId(null); // Wyjście z trybu automatycznego
         }
         // Ustawienie konkretnego trybu
@@ -73,7 +82,30 @@ public class LampService {
             lamp.setActiveModeId(command.getSetModeCommand().getModeId());
         }
         // Blink LED, Reboot, OTA - nie zmieniają stanu w bazie trwale, tylko przelatują przez MQTT
+        else if(command.hasSetPhotoWhiteSettingsCommand()){
+            lamp.setOn(true);
+            lamp.setActiveModeId(null);
+            IotProtos.PhotoWhiteSetting pws = command.getSetPhotoWhiteSettingsCommand().getPhotoWhiteSetting();
+            lamp.setPhotoWhiteIntensity(pws.getIntensity());
+            lamp.setPhotoWhiteTemp(pws.getTemperature());
+        }
+        else if (command.hasSetPhotoColorSettingsCommand()){
+            lamp.setOn(true);
+            lamp.setActiveModeId(null);
+            IotProtos.PhotoColorSetting pcs = command.getSetPhotoColorSettingsCommand().getPhotoColorSetting();
+            lamp.setPhotoColorIntensity(pcs.getIntensity());
+            lamp.setPhotoColorSaturation(pcs.getSaturation());
+            lamp.setPhotoColorHue(pcs.getHue());
+        }
+        lampRepository.save(lamp);
+    }
 
+    @Transactional
+    public void renameLamp(String lampId, String newName) {
+        Lamp lamp = lampRepository.findById(lampId)
+                .orElseThrow(() -> new RuntimeException("Lamp not found"));
+
+        lamp.setDeviceName(newName);
         lampRepository.save(lamp);
     }
 
@@ -340,6 +372,12 @@ public class LampService {
 
     // --- Status Report (Dane Telemetryczne) ---
     public IotProtos.StatusReport getLampStatusReport(String lampId) {
+        Optional<Lamp> lampOpt = lampRepository.findById(lampId);
+        if (lampOpt.isEmpty()) {
+            // Jeśli nie ma lampy, nie ma sensu szukać metryk. Zwracamy pusty/null.
+            return null;
+        }
+        Lamp lamp = lampOpt.get();
         return metricRepository.findTop100ByLampIdOrderByTimestampDesc(lampId).stream()
                 .findFirst()
                 .map(metric -> {
@@ -349,6 +387,15 @@ public class LampService {
                             try { temps.add((int) Double.parseDouble(t)); } catch (NumberFormatException ignored) {}
                         }
                     }
+                    IotProtos.DirectSettings.Builder directSettingsBuilder = IotProtos.DirectSettings.newBuilder();
+
+                    directSettingsBuilder.setRed(lamp.getRed() != null ? lamp.getRed() : 0);
+                    directSettingsBuilder.setGreen(lamp.getGreen() != null ? lamp.getGreen() : 0);
+                    directSettingsBuilder.setBlue(lamp.getBlue() != null ? lamp.getBlue() : 0);
+                    directSettingsBuilder.setColdWhite(lamp.getColdWhite() != null ? lamp.getColdWhite() : 0);
+                    directSettingsBuilder.setNeutralWhite(lamp.getNeutralWhite() != null ? lamp.getNeutralWhite() : 0);
+                    directSettingsBuilder.setWarmWhite(lamp.getWarmWhite() != null ? lamp.getWarmWhite() : 0);
+
 
                     //float power = metric.getPowerWatts() != null ? metric.getPowerWatts().floatValue() : 0.0f;
                     //float brightness = metric.getBrightness() != null ? metric.getBrightness().floatValue() : 0.0f;
@@ -358,6 +405,9 @@ public class LampService {
                             .setUptimeSeconds(metric.getUptimeSeconds() != null ? metric.getUptimeSeconds() : 0)
                             .setTs(metric.getDeviceTimestamp() != null ? metric.getDeviceTimestamp() : 0)
                             .addAllTemperatureReadings(temps)
+                            .setAmbientLight(metric.getAmbientLight() != null ? metric.getAmbientLight() : 0)
+                            .setAmbientNoise(metric.getAmbientNoise() != null ? metric.getAmbientNoise() : 0)
+                            .setLedSettings(directSettingsBuilder)
                             //.setPowerConsumptionWatts(power)
                             //.setBrightnessLevel(brightness)
                             .build();
