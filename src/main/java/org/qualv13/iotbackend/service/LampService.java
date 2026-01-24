@@ -277,7 +277,7 @@ public class LampService {
         saveConfigJsonToDb(lamp, protoConfig);
         lampRepository.save(lamp);
         //sendConfigToMqtt(lampId, protoConfig);
-        mqttService.sendConfigToLamp(lampId, protoConfig);
+        //mqttService.sendConfigToLamp(lampId, protoConfig);
     }
 
 
