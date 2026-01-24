@@ -46,7 +46,9 @@ public class LampModeConfig {
         // Pola dla Triggera
         private Integer startHour;
         private Integer endHour;
+
         private Integer transitionDurationMinutes;
+
         private Integer minBrightness;
         private Integer maxBrightness;
 
@@ -59,6 +61,7 @@ public class LampModeConfig {
         private Integer blue;
         private Integer warmWhite;
         private Integer coldWhite;
+        private Integer neutralWhite;
 
         // Pola dla Akcji - Disco
         private String discoMode;
@@ -90,6 +93,7 @@ public class LampModeConfig {
 
         private Integer warmWhite;
         private Integer coldWhite; // Dla PhotoWhiteSetting ma to pole 'intensity' i 'temperature'
+        private Integer neutralWhite;
 
         private Integer intensity;
         private Integer temperature;

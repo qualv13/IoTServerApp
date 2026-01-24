@@ -12,6 +12,7 @@ public interface LampMetricRepository extends JpaRepository<LampMetric, Long> {
 
     List<LampMetric> findTop100ByLampIdOrderByTimestampDesc(String lampId);
     Optional<LampMetric> findFirstByLampIdOrderByTimestampDesc(String lampId);
+    void deleteByLampId(String lampId);
 
     Double getLampMetricByLampIdOrderByTimestampDesc(String lampId);
 
@@ -19,13 +20,25 @@ public interface LampMetricRepository extends JpaRepository<LampMetric, Long> {
      * Pobiera najnowszy string 'temperatures' dla każdej lampy z podanej listy ID.
      * Wybiera te metryki, których timestamp jest równy maksymalnemu timestampowi dla danego lampId.
      */
-    @Query("SELECT m.temperatures FROM LampMetric m " +
-            "WHERE m.lampId IN :lampIds " +
-            "AND m.timestamp = (" +
-            "SELECT MAX(innerM.timestamp) " +
-            "FROM LampMetric innerM " +
-            "WHERE innerM.lampId = m.lampId" +
-            ")")
+//    @Query("SELECT m.temperatures FROM LampMetric m " +
+//            "WHERE m.lampId IN :lampIds " +
+//            "AND m.timestamp = (" +
+//            "SELECT MAX(innerM.timestamp) " +
+//            "FROM LampMetric innerM " +
+//            "WHERE innerM.lampId = m.lampId" +
+//            ")")
+//    List<Double> findLatestTemperaturesForLampIds(@Param("lampIds") List<String> lampIds);
+
+    @Query(value = """
+        SELECT CAST(NULLIF(SPLIT_PART(m.temperatures, ',', 1), '') AS DOUBLE PRECISION)
+        FROM lamp_metrics m
+        WHERE m.id IN (
+            SELECT MAX(id) 
+            FROM lamp_metrics 
+            WHERE lamp_id IN :lampIds 
+            GROUP BY lamp_id
+        )
+        """, nativeQuery = true)
     List<Double> findLatestTemperaturesForLampIds(@Param("lampIds") List<String> lampIds);
 
     // 1. Aktualna temperatura (KPI)
@@ -58,6 +71,7 @@ public interface LampMetricRepository extends JpaRepository<LampMetric, Long> {
         WHERE m.lamp_id IN :lampIds
           AND m.timestamp >= NOW() - INTERVAL '24 HOURS'
           AND CAST(NULLIF(SPLIT_PART(m.temperatures, ',', 1), '') AS DOUBLE PRECISION) > -20 
+          AND m.is_abnormal = false
         GROUP BY hour_bucket
         ORDER BY hour_bucket
         """, nativeQuery = true)

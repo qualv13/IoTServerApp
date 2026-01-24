@@ -55,7 +55,7 @@ public class StatsService {
         long online = lamps.stream().filter(Lamp::isOn).count();
         List<String> lampIds = lamps.stream().map(Lamp::getId).toList();
 
-        // 2. Dystrybucje (Kolory, Firmware, Tryby)
+        // 2. Dystrybucje
         Map<String, Long> colors = lamps.stream()
                 .filter(l -> l.isOn() && l.getColor() != null)
                 .collect(Collectors.groupingBy(Lamp::getColor, Collectors.counting()));
@@ -64,26 +64,29 @@ public class StatsService {
                 .filter(l -> l.getFirmwareVersion() != null)
                 .collect(Collectors.groupingBy(Lamp::getFirmwareVersion, Collectors.counting()));
 
-        // TODO: Jeśli masz pole 'mode' w encji Lamp, odkomentuj to:
         Map<String, Long> modes = new HashMap<>();
-        // Map<String, Long> modes = lamps.stream().collect(Collectors.groupingBy(Lamp::getMode, Collectors.counting()));
+        // Jeśli masz pole mode:
+        modes = lamps.stream().filter(l -> l.getActiveModeId() != null).collect(Collectors.groupingBy(l -> l.getActiveModeId().toString(), Collectors.counting()));
 
-        // 3. Obliczenia KPI (Aktualna średnia temperatura i moc)
+        // 3. Obliczenia KPI
         double currentAvgTemp = 0.0;
         double totalWatts = 0.0;
 
         if (!lampIds.isEmpty()) {
-            // A. Średnia temperatura (z najnowszych odczytów)
+            // A. Średnia temperatura (POPRAWKA: Bezpieczniejsze pobieranie)
             List<Double> latestTemps = metricRepository.findLatestTemperaturesForLampIds(lampIds);
+
+            // Logowanie dla pewności (zobaczysz to w konsoli)
+            // System.out.println("Latest temps from DB: " + latestTemps);
+
             currentAvgTemp = latestTemps.stream()
-                    .mapToDouble(s -> {
-                        try { return s; } catch (Exception e) { return 0.0; }
-                    })
+                    .filter(java.util.Objects::nonNull) // Odrzuć nulle z bazy
+                    .mapToDouble(Double::doubleValue)
                     .average()
                     .orElse(0.0);
         }
 
-        // B. Szacowana moc (Estymacja: 9W to max, 0.5W standby)
+        // B. Szacowana moc
         for (Lamp l : lamps) {
             if (l.isOn()) {
                 double brightnessFactor = (l.getBrightness() != null ? l.getBrightness() : 50) / 100.0;
@@ -98,15 +101,14 @@ public class StatsService {
         List<Double> histValues = new ArrayList<>();
 
         if (!lampIds.isEmpty()) {
-            // Pobieramy zagregowane dane z SQL (godzina -> średnia)
             List<Object[]> historyData = metricRepository.getHourlyAverageTemperature(lampIds);
 
             for (Object[] row : historyData) {
-                // row[0] to godzina (String), row[1] to średnia (Double)
                 if (row[0] != null && row[1] != null) {
                     histLabels.add(row[0].toString());
-                    // Zaokrąglenie do 1 miejsca po przecinku
-                    double val = (Double) row[1];
+
+                    // POPRAWKA: Bezpieczne rzutowanie (Number obsługuje BigDecimal i Double)
+                    double val = ((Number) row[1]).doubleValue();
                     histValues.add(Math.round(val * 10.0) / 10.0);
                 }
             }
@@ -120,9 +122,9 @@ public class StatsService {
                 .estimatedPowerUsageWatts(Math.round(totalWatts * 10.0) / 10.0)
                 .colorDistribution(colors)
                 .firmwareDistribution(firmwares)
-                .modeDistribution(modes) // Może być puste
-                .historyLabels(histLabels) // Oś X
-                .historyValues(histValues) // Oś Y
+                .modeDistribution(modes)
+                .historyLabels(histLabels)
+                .historyValues(histValues)
                 .build();
     }
 

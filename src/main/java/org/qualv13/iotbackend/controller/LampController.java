@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.qualv13.iotbackend.dto.DetailedLampDto;
 import org.qualv13.iotbackend.dto.SmartConfigDto;
@@ -90,6 +91,13 @@ public class LampController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "Wymuś synchronizację konfiguracji", description = "Pobiera config z bazy i wysyła ponownie do lampy przez MQTT")
+    @PostMapping("/{lampId}/config/refresh")
+    public ResponseEntity<Void> refreshConfig(@PathVariable String lampId) {
+        // Dodaj tu ewentualnie check uprawnień (getLampWithAuthCheck)
+        lampService.refreshLampConfig(lampId);
+        return ResponseEntity.ok().build();
+    }
     // --- COMMAND (POST) ---
     @Operation(summary = "Wyślij komendę (Protobuf)", description = "Wysyła natychmiastowe polecenie do urządzenia.",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -101,6 +109,93 @@ public class LampController {
         log.info("POST /lamps/{}/command", lampId);
         lampService.updateLampStateFromCommand(lampId, command);
         mqttService.sendCommandToLamp(lampId, command);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Aktywuj preset (0-4)", description = "Włącza zdefiniowany wcześniej preset na lampie")
+    @PostMapping("/{lampId}/presets/{index}")
+    public ResponseEntity<Void> activatePreset(@PathVariable String lampId, @PathVariable int index) {
+        log.info("POST /lamps/{}/presets/{}", lampId, index);
+        mqttService.setPreset(lampId, index);
+        return ResponseEntity.ok().build();
+    }
+
+    // --- Lamp Restart ---
+    @Operation(summary = "Zrestartuj lampę")
+    @PostMapping("/{lampId}/reboot")
+    public ResponseEntity<Void> rebootLamp(@PathVariable String lampId) {
+        log.info("POST /lamps/{}/reboot", lampId);
+
+        IotProtos.RebootCommand reboot = IotProtos.RebootCommand.newBuilder().build();
+
+        IotProtos.LampCommand command = IotProtos.LampCommand.newBuilder()
+                .setVersion(1)
+                .setTs(System.currentTimeMillis() / 1000)
+                .setRebootCommand(reboot)
+                .build();
+
+        mqttService.sendCommandToLamp(lampId, command);
+        return ResponseEntity.ok().build();
+    }
+
+    // --- Lamp blink ---
+    @Operation(summary = "Mrugnij lampą (Identify)")
+    @PostMapping("/{lampId}/blink")
+    public ResponseEntity<Void> blinkLamp(@PathVariable String lampId, @RequestParam(defaultValue = "5") int duration) {
+        log.info("POST /lamps/{}/blink?duration={}", lampId, duration);
+
+        IotProtos.BlinkLedCommand blink = IotProtos.BlinkLedCommand.newBuilder()
+                .setDuration(duration)
+                .build();
+
+        IotProtos.LampCommand command = IotProtos.LampCommand.newBuilder()
+                .setVersion(1)
+                .setTs(System.currentTimeMillis() / 1000)
+                .setBlinkLedCommand(blink)
+                .build();
+
+        mqttService.sendCommandToLamp(lampId, command);
+        return ResponseEntity.ok().build();
+    }
+
+    // --- WiFi change ---
+    @Data
+    public static class WifiConfigRequest {
+        private String ssid;
+        private String password;
+    }
+
+    @Operation(summary = "Zmień sieć WiFi lampy")
+    @PostMapping("/{lampId}/wifi")
+    public ResponseEntity<Void> setWifi(@PathVariable String lampId, @RequestBody WifiConfigRequest request) {
+        log.info("POST /lamps/{}/wifi -> SSID: {}", lampId, request.getSsid());
+
+        IotProtos.SetWifiParamsCommand wifi = IotProtos.SetWifiParamsCommand.newBuilder()
+                .setSsid(request.getSsid())
+                .setPassword(request.getPassword())
+                .build();
+
+        IotProtos.LampCommand command = IotProtos.LampCommand.newBuilder()
+                .setVersion(1)
+                .setTs(System.currentTimeMillis() / 1000)
+                .setSetWifiParamsCommand(wifi)
+                .build();
+
+        mqttService.sendCommandToLamp(lampId, command);
+        return ResponseEntity.ok().build();
+    }
+
+    // --- ALERTY ---
+    @Data
+    public static class AckAlertsRequest {
+        private List<Integer> alertIds;
+    }
+
+    @Operation(summary = "Potwierdź alerty", description = "Wysyła do lampy informację, że użytkownik widział błędy")
+    @PostMapping("/{lampId}/alerts/ack")
+    public ResponseEntity<Void> acknowledgeAlerts(@PathVariable String lampId, @RequestBody AckAlertsRequest request) {
+        log.info("POST /lamps/{}/alerts/ack -> {}", lampId, request.getAlertIds());
+        mqttService.acknowledgeAlerts(lampId, request.getAlertIds());
         return ResponseEntity.ok().build();
     }
 

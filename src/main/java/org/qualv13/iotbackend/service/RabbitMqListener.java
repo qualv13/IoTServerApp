@@ -4,7 +4,9 @@ import com.iot.backend.proto.IotProtos;
 import lombok.extern.slf4j.Slf4j;
 import org.qualv13.iotbackend.config.RabbitConfig;
 import org.qualv13.iotbackend.entity.Lamp;
+import org.qualv13.iotbackend.entity.LampAlert;
 import org.qualv13.iotbackend.entity.LampMetric;
+import org.qualv13.iotbackend.repository.LampAlertRepository;
 import org.qualv13.iotbackend.repository.LampMetricRepository;
 import lombok.RequiredArgsConstructor;
 import org.qualv13.iotbackend.repository.LampRepository;
@@ -14,6 +16,7 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -23,6 +26,7 @@ public class RabbitMqListener {
 
     private final LampMetricRepository metricRepository;
     private final LampRepository lampRepository;
+    private final LampAlertRepository alertRepository;
 
     @RabbitListener(queues = RabbitConfig.QUEUE_NAME)
     public void receiveMessage(byte[] payload,
@@ -68,6 +72,17 @@ public class RabbitMqListener {
                 lampEntity.setLastAmbientLight(report.getAmbientLight());
                 lampEntity.setLastAmbientNoise(report.getAmbientNoise());
                 lampEntity.setOnline(true); // Przy okazji odświeżamy status
+
+                if(report.hasLedSettings()){
+                    lampEntity.setRed(report.getLedSettings().getRed());
+                    lampEntity.setGreen(report.getLedSettings().getGreen());
+                    lampEntity.setBlue(report.getLedSettings().getBlue());
+                    lampEntity.setColdWhite(report.getLedSettings().getColdWhite());
+                    lampEntity.setNeutralWhite(report.getLedSettings().getNeutralWhite());
+                    lampEntity.setWarmWhite(report.getLedSettings().getWarmWhite());
+                }
+
+
                 lampRepository.save(lampEntity);
 
                 // 2. Mapowanie na bazę danych
@@ -85,7 +100,35 @@ public class RabbitMqListener {
                         .collect(Collectors.joining(","));
                 metric.setTemperatures(tempStr);
 
+                metric.setIsAbnormal(report.getIsAbnormal());
+
+                if (report.getIsAbnormal()) {
+                    log.warn("Otrzymano ABNORMAL REPORT od lampy {}", lampId);
+                }
+
                 metricRepository.save(metric);
+
+                List<LampAlert> currentAlerts = alertRepository.findByLampIdAndIsActiveTrue(lampId);
+                if (!currentAlerts.isEmpty()) {
+                    // Deaktywuj wszystkie i zapisz nowe, lub usuń
+                    alertRepository.deleteAll(currentAlerts);
+                }
+
+                if (report.getActiveAlertsCount() > 0) {
+                    for (IotProtos.Alert protoAlert : report.getActiveAlertsList()) {
+                        LampAlert alert = new LampAlert();
+                        alert.setLampId(lampId);
+                        alert.setAlertCode(protoAlert.getCauseValue());
+                        alert.setAlertLevel(protoAlert.getLevelValue());
+                        alert.setMessage(protoAlert.getMessage());
+                        alert.setAlertIdFromDevice(protoAlert.getId());
+                        alert.setTimestamp(LocalDateTime.now());
+                        alert.setActive(true);
+
+                        alertRepository.save(alert);
+                        log.warn("⚠️ ALARM z lampy {}: {} (Level {})", lampId, protoAlert.getMessage(), protoAlert.getLevel());
+                    }
+                }
 
                 //System.out.println("Zapisano status dla lampy: " + lampId + ", Uptime: " + report.getUptimeSeconds());
                 log.info("Zapisano status dla lampy: {}, Uptime: {}", lampId, report.getUptimeSeconds());

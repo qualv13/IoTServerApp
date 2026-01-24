@@ -10,8 +10,41 @@ message StatusReport {
   repeated uint32 temperature_readings = 4;
   uint32 ambient_light = 5;
   uint32 ambient_noise = 6;
-  DirectSettings led_settings = 7;
+  optional DirectSettings led_settings = 7;
+  bool is_abnormal = 8; // aka non scheduled report
+  bool has_more_alerts = 9;
+  repeated Alert active_alerts = 10;
 }
+
+enum AlertLevels {
+  DEBUG = 0;
+  INFO = 1;
+  WARNING = 2;
+  ERROR = 3;
+  CRITICAL = 4;
+}
+
+enum AlertCauses {
+  GENERAL = 0;
+  WIFI = 1;
+  OTA_UPDATE = 2;
+  HARDWARE = 3;
+  INVALID_CONFIG = 4;
+  INVALID_COMMAND = 5;
+  INVALID_MODE = 6;
+  INVALID_PRESET = 7;
+}
+
+message Alert {
+  uint32 version = 1;
+  int64 ts = 2;
+  AlertLevels level = 3;
+  AlertCauses cause = 4;
+  string message = 5;
+  uint32 id = 6;
+  bool will_persist = 7;
+}
+
 
 message DirectSettings {
   uint32 red = 1;
@@ -47,9 +80,10 @@ message DiscoModeSettings {
 }
 
 message HourSetting {
-  uint32 start_hour = 1;
-  uint32 end_hour = 2;
-  uint32 transition_duration_minutes = 3;
+  uint32 start_second_past_midnight = 1; // seconds from midnight
+  uint32 end_second_past_midnight = 2; // seconds from midnight if end_hour < start_hour, it means the next day
+  bool ends_next_day = 3;
+  uint32 transition_duration_seconds = 4;
 }
 
 message BrightnessSettings {
@@ -58,24 +92,7 @@ message BrightnessSettings {
   uint32 transition_duration_minutes = 3;
 }
 
-message ScheduleEntry {
-  oneof trigger {
-    HourSetting hour_setting = 1;
-    BrightnessSettings brightness_settings = 2;
-  }
-  oneof action {
-    DirectSettings direct_settings = 3;
-    PhotoWhiteSetting photo_white_setting = 4;
-    PhotoColorSetting photo_color_setting = 5;
-    DiscoModeSettings disco_mode_settings = 6;
-  }
-}
-
-message DaylightModeSettings {
-  repeated ScheduleEntry schedule_entries = 1;
-}
-
-message PresetEntry {
+message LampState {
   oneof setting {
     DirectSettings direct_settings = 1;
     PhotoWhiteSetting photo_white_setting = 2;
@@ -83,8 +100,25 @@ message PresetEntry {
   }
 }
 
+message ScheduleEntry {
+  oneof trigger {
+    HourSetting hour_setting = 1;
+    BrightnessSettings brightness_settings = 2;
+  }
+  LampState target_state = 3;
+}
+
+message DaylightModeSettings {
+  // Max 8 schedule changes per day
+  // Either all hour_setting or all brightness_settings should be used
+  // at least one should be present
+  repeated ScheduleEntry schedule_entries = 1;
+}
+
+
 message PresetModeSetting {
-  repeated PresetEntry presets = 1;
+  // 5 quick-select presets
+  repeated LampState presets = 1;
 }
 
 message ModeCombinedSetting {
@@ -102,10 +136,11 @@ message InternalLampConfig {
 }
 
 message LampConfig {
-  uint32 version = 1; // current config version: 1
+  uint32 version = 1;
   int64 ts = 2;
+  // Support for up to 4 distinct mode configurations
   repeated ModeCombinedSetting mode_settings = 3;
-  InternalLampConfig internal_lamp_config = 4; // not exposed to user
+  InternalLampConfig internal_lamp_config = 4;
 }
 
 message SetWifiParamsCommand {
@@ -143,9 +178,16 @@ message RegisterLampCommand {
   string token = 1;
 }
 
+message SetPresetCommand {
+  uint32 preset_index = 1;
+}
+
+message AcknowledgeAlert {
+  repeated uint32 alert_ids = 1;
+}
 
 message LampCommand {
-  uint32 version = 1; // current command version: 1
+  uint32 version = 1;
   int64 ts = 2;
   oneof command {
     SetWifiParamsCommand set_wifi_params_command = 3;
@@ -157,5 +199,7 @@ message LampCommand {
     RebootCommand reboot_command = 9;
     DownloadOtaUpdateCommand download_ota_update_command = 10;
     RegisterLampCommand register_lamp_command = 11;
+    SetPresetCommand set_preset_command = 12;
+    AcknowledgeAlert acknowledge_alert = 13;
   }
 }

@@ -7,6 +7,8 @@ import org.springframework.integration.mqtt.outbound.MqttPahoMessageHandler;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -56,6 +58,36 @@ public class MqttService {
 
         sendBytes("lamps/" + lampId + "/command", command.toByteArray());
         log.info("Wysłano token rejestracyjny do lampy: {}", lampId);
+    }
+
+    public void setPreset(String lampId, int presetIndex) {
+        IotProtos.SetPresetCommand presetCmd = IotProtos.SetPresetCommand.newBuilder()
+                .setPresetIndex(presetIndex)
+                .build();
+
+        IotProtos.LampCommand command = IotProtos.LampCommand.newBuilder()
+                .setVersion(1)
+                .setTs(System.currentTimeMillis() / 1000)
+                .setSetPresetCommand(presetCmd)
+                .build();
+
+        sendCommandToLamp(lampId, command);
+        log.info("MqttService: Wysłano preset {} do lampy {}", presetIndex, lampId);
+    }
+
+    public void acknowledgeAlerts(String lampId, List<Integer> alertIds) {
+        IotProtos.AcknowledgeAlert ackCmd = IotProtos.AcknowledgeAlert.newBuilder()
+                .addAllAlertIds(alertIds)
+                .build();
+
+        IotProtos.LampCommand command = IotProtos.LampCommand.newBuilder()
+                .setVersion(1)
+                .setTs(System.currentTimeMillis() / 1000)
+                .setAcknowledgeAlert(ackCmd)
+                .build();
+
+        sendCommandToLamp(lampId, command);
+        log.info("MqttService: Potwierdzono alerty {} dla lampy {}", alertIds, lampId);
     }
 
 //    // ==========================================

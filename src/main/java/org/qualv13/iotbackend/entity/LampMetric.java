@@ -30,6 +30,9 @@ public class LampMetric {
 
     @Column(name = "ambient_noise")
     private Integer ambientNoise;
+
+    @Column(name = "is_abnormal")
+    private Boolean isAbnormal = false;
 }
 
 
