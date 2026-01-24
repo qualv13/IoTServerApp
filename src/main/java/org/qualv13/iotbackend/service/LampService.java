@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iot.backend.proto.IotProtos;
 import lombok.extern.slf4j.Slf4j;
 import org.qualv13.iotbackend.entity.Lamp;
+import org.qualv13.iotbackend.entity.LampAlert;
 import org.qualv13.iotbackend.entity.User;
 import org.qualv13.iotbackend.config.LampModeConfig;
 import org.qualv13.iotbackend.repository.LampAlertRepository;
@@ -21,10 +22,7 @@ import org.springframework.context.annotation.Lazy;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.HexFormat;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -696,6 +694,7 @@ public class LampService {
     }
 
     // --- Status Report (Dane Telemetryczne) ---
+    @Transactional(readOnly = true)
     public IotProtos.StatusReport getLampStatusReport(String lampId) {
         Optional<Lamp> lampOpt = Optional.of(getLampWithAuthCheck(lampId));
         if (lampOpt.isEmpty()) {
@@ -706,12 +705,25 @@ public class LampService {
         return metricRepository.findTop100ByLampIdOrderByTimestampDesc(lampId).stream()
                 .findFirst()
                 .map(metric -> {
-                    List<Integer> temps = new ArrayList<>();
+                    IotProtos.StatusReport.Builder reportBuilder = IotProtos.StatusReport.newBuilder()
+                            .setVersion(1)
+                            .setTs(metric.getDeviceTimestamp() != null ? metric.getDeviceTimestamp() : System.currentTimeMillis())
+                            .setUptimeSeconds(metric.getUptimeSeconds() != null ? metric.getUptimeSeconds() : 0)
+                            .setAmbientLight(metric.getAmbientLight() != null ? metric.getAmbientLight() : 0)
+                            .setAmbientNoise(metric.getAmbientNoise() != null ? metric.getAmbientNoise() : 0);
+
                     if (metric.getTemperatures() != null && !metric.getTemperatures().isEmpty()) {
-                        for (String t : metric.getTemperatures().split(",")) {
-                            try { temps.add((int) Double.parseDouble(t)); } catch (NumberFormatException ignored) {}
-                        }
+                        Arrays.stream(metric.getTemperatures().split(","))
+                                .map(String::trim)
+                                .filter(s -> !s.isEmpty())
+                                .map(s -> {
+                                    try { return (int) Double.parseDouble(s); } catch (NumberFormatException e) { return null; }
+                                })
+                                .filter(Objects::nonNull)
+                                .forEach(reportBuilder::addTemperatureReadings);
                     }
+
+                    // --- 4. MAPOWANIE LED SETTINGS (Stan lampy) ---
                     IotProtos.DirectSettings.Builder directSettingsBuilder = IotProtos.DirectSettings.newBuilder();
 
                     directSettingsBuilder.setRed(lamp.getRed() != null ? lamp.getRed() : 0);
@@ -721,21 +733,51 @@ public class LampService {
                     directSettingsBuilder.setNeutralWhite(lamp.getNeutralWhite() != null ? lamp.getNeutralWhite() : 0);
                     directSettingsBuilder.setWarmWhite(lamp.getWarmWhite() != null ? lamp.getWarmWhite() : 0);
 
+                    reportBuilder.setLedSettings(directSettingsBuilder);
 
-                    //float power = metric.getPowerWatts() != null ? metric.getPowerWatts().floatValue() : 0.0f;
-                    //float brightness = metric.getBrightness() != null ? metric.getBrightness().floatValue() : 0.0f;
+                    // --- MAPOWANIE ALERTÓW (Nowa część) ---
 
-                    return IotProtos.StatusReport.newBuilder()
-                            .setVersion(1)
-                            .setUptimeSeconds(metric.getUptimeSeconds() != null ? metric.getUptimeSeconds() : 0)
-                            .setTs(metric.getDeviceTimestamp() != null ? metric.getDeviceTimestamp() : 0)
-                            .addAllTemperatureReadings(temps)
-                            .setAmbientLight(metric.getAmbientLight() != null ? metric.getAmbientLight() : 0)
-                            .setAmbientNoise(metric.getAmbientNoise() != null ? metric.getAmbientNoise() : 0)
-                            .setLedSettings(directSettingsBuilder)
-                            //.setPowerConsumptionWatts(power)
-                            //.setBrightnessLevel(brightness)
-                            .build();
+                    // 1. Pobieramy alerty z bazy danych
+                    List<LampAlert> activeAlerts = alertRepository.findByLampIdAndIsActiveTrue(lampId);
+
+                    for (LampAlert entity : activeAlerts) {
+                        // Tworzymy builder alertu Protobuf
+                        IotProtos.Alert.Builder protoAlert = IotProtos.Alert.newBuilder();
+
+                        // Mapujemy ID i Wiadomość
+                        protoAlert.setId(entity.getId().intValue());
+                        protoAlert.setMessage(entity.getMessage() != null ? entity.getMessage() : "Unknown Error");
+
+                        // Konwersja czasu (Java LocalDateTime -> Protobuf int64 timestamp)
+                        if (entity.getTimestamp() != null) {
+                            // Zakładamy UTC, zmień ZoneOffset jeśli używasz czasu lokalnego
+                            protoAlert.setTs(entity.getTimestamp().toInstant(java.time.ZoneOffset.UTC).toEpochMilli());
+                        }
+
+                        // Mapowanie CAUSE (Integer z bazy -> Enum Proto)
+                        if (entity.getAlertCode() != null) {
+                            IotProtos.AlertCauses cause = IotProtos.AlertCauses.forNumber(entity.getAlertCode());
+                            protoAlert.setCause(cause != null ? cause : IotProtos.AlertCauses.GENERAL);
+                        } else {
+                            protoAlert.setCause(IotProtos.AlertCauses.GENERAL);
+                        }
+
+                        // Mapowanie LEVEL (Integer z bazy -> Enum Proto)
+                        if (entity.getAlertLevel() != null) {
+                            IotProtos.AlertLevels level = IotProtos.AlertLevels.forNumber(entity.getAlertLevel());
+                            protoAlert.setLevel(level != null ? level : IotProtos.AlertLevels.ERROR);
+                        } else {
+                            protoAlert.setLevel(IotProtos.AlertLevels.ERROR);
+                        }
+
+                        protoAlert.setWillPersist(true);
+
+                        // Dodajemy gotowy alert do raportu
+                        reportBuilder.addActiveAlerts(protoAlert);
+                    }
+                    // --------------------------------------
+
+                    return reportBuilder.build();
                 })
                 .orElse(IotProtos.StatusReport.newBuilder().setVersion(1).build());
     }

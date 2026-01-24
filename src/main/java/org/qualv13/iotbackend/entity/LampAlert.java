@@ -1,12 +1,17 @@
 package org.qualv13.iotbackend.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "lamp_alerts")
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class LampAlert {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,6 +27,8 @@ public class LampAlert {
     private Integer alertLevel; // Mapowanie z enuma AlertLevels
 
     private String message;
+
+    @Column(name = "timestamp")
     private LocalDateTime timestamp;
 
     @Column(name = "is_active")

@@ -10,6 +10,7 @@ import java.util.Optional;
 
 public interface LampMetricRepository extends JpaRepository<LampMetric, Long> {
 
+    Optional<LampMetric> findTopByLampIdOrderByTimestampDesc(String lampId);
     List<LampMetric> findTop100ByLampIdOrderByTimestampDesc(String lampId);
     Optional<LampMetric> findFirstByLampIdOrderByTimestampDesc(String lampId);
     void deleteByLampId(String lampId);
