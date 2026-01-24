@@ -28,8 +28,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    #      rabbitmq:
-    #        condition: service_healthy
+      rabbitmq:
+        condition: service_started
     environment:
       # Nadpisujemy ustawienia z application.yaml zmiennymi środowiskowymi
 
@@ -39,7 +39,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=password
 
       # Konfiguracja MQTT (adres to 'rabbitmq', nie localhost ani srv38...)
-      - MQTT_BROKER=tcp://srv38.mikr.us:40131
+      - MQTT_BROKER=tcp://rabbitmq:1883
       - MQTT_USERNAME=iotproject
       - MQTT_PASSWORD=iotproject
 
@@ -49,19 +49,23 @@ services:
     networks:
       - iot-net
 
-#  # Broker wiadomości (AMQP + MQTT)
-#  rabbitmq:
-#    image: rabbitmq:3-management
-#    container_name: iot_rabbitmq
-#    ports:
-#      - "5672:5672"   # AMQP (Spring Boot connection)
-#      - "15672:15672" # Management UI (http://localhost:15672)
-#      - "1883:1883"   # MQTT Port (IoT Devices connection)
-#    environment:
-#      - RABBITMQ_DEFAULT_USER=guest
-#      - RABBITMQ_DEFAULT_PASS=guest
-#    # Ważne: Włączamy plugin MQTT przy starcie
-#    command: /bin/sh -c "rabbitmq-plugins enable rabbitmq_mqtt && rabbitmq-server"
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq-mqtt-kierzno
+    ports:
+      # - "5672:5672"   # AMQP
+      - "40132:15672" # Management UI
+      - "40131:1883"   # MQTT Port
+    environment:
+      - RABBITMQ_DEFAULT_USER=iotproject
+      - RABBITMQ_DEFAULT_PASS=iotproject
+    # This command enables the necessary plugins before starting the server
+    command: >
+      sh -c "rabbitmq-plugins enable rabbitmq_mqtt rabbitmq_auth_backend_http && rabbitmq-server"
+    volumes:
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    networks:
+      - iot-net
 
 networks:
   iot-net:

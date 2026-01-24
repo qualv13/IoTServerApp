@@ -74,16 +74,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // 2. TUTAJ JEST ZMIANA:
             // Jeśli token jest nieprawidłowy (np. wygasł), NIE puszczamy żądania dalej.
             // Zwracamy natychmiast błąd 403 Forbidden.
+            SecurityContextHolder.clearContext();
 
             System.out.println("BŁĄD WERYFIKACJI TOKENA (Zwracam 403): " + e.getMessage());
 
             // Ustawiamy status 403
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
-            response.getWriter().write("{\"error\": \"Token expired or invalid\"}");
-
-            // Ważne: RETURN, aby nie wykonać filterChain.doFilter() na dole
-            //return;
+            response.getWriter().write("{\"error\":\"unauthorized\",\"message\":\"Invalid or expired access token\"}");
+            return; // NIE idziemy dalej w filterChain
         }
 
         System.out.println("--- END FILTER DEBUG ---");
@@ -97,6 +96,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return  path.startsWith("/swagger-ui") ||
                 path.startsWith("/v3/api-docs") ||
                 path.startsWith("/auth/login") ||
+                path.startsWith("/auth/") ||
                 path.startsWith("/api/mqtt/auth");
     }
 }
