@@ -134,7 +134,7 @@ public class LampService {
             // Jeśli wywołanie przyszło z REST API, musimy popchnąć to na MQTT.
             // Sprawdzamy, czy to nie jest pętla zwrotna (opcjonalnie).
             // W prostym modelu: Zawsze wysyłamy.
-            mqttService.sendCommandToLamp(lampId, command);
+            //mqttService.sendCommandToLamp(lampId, command);
         }
         //lampRepository.save(lamp);
     }
