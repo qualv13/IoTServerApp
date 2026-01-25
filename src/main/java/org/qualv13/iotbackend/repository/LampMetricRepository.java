@@ -77,4 +77,6 @@ public interface LampMetricRepository extends JpaRepository<LampMetric, Long> {
         ORDER BY hour_bucket
         """, nativeQuery = true)
     List<Object[]> getHourlyAverageTemperature(@Param("lampIds") List<String> lampIds);
+
+    List<LampMetric> findTop50ByLampIdOrderByTimestampDesc(String lampId);
 }

@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.qualv13.iotbackend.dto.DetailedLampDto;
+import org.qualv13.iotbackend.dto.MetricPoint;
 import org.qualv13.iotbackend.dto.SmartConfigDto;
 import org.qualv13.iotbackend.dto.UpdateLampNameRequest;
 import org.qualv13.iotbackend.entity.Lamp;
@@ -21,9 +22,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -224,6 +228,23 @@ public class LampController {
                 .toList();
 
         return ResponseEntity.ok(values);
+    }
+
+    @GetMapping("/{lampId}/history")
+    public ResponseEntity<List<MetricPoint>> getLampHistory(@PathVariable String lampId) {
+        // Pobieramy 50 ostatnich rekordów (najnowsze na początku)
+        List<LampMetric> metrics = metricRepository.findTop50ByLampIdOrderByTimestampDesc(lampId);
+
+        // Mapujemy na DTO i ODWRACAMY kolejność (wykres potrzebuje od najstarszego do najnowszego)
+        List<MetricPoint> history = metrics.stream()
+                .map(m -> new MetricPoint(
+                        m.getTimestamp().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(), // Konwersja LocalDateTime -> Millis
+                        m.getAmbientLight() != null ? m.getAmbientLight() : 0
+                ))
+                .sorted(Comparator.comparingLong(MetricPoint::getIdx)) // Sortujemy rosnąco (czasem)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(history);
     }
 
     @PutMapping("/{lampId}/name")
