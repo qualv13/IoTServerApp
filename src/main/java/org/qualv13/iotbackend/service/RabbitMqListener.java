@@ -82,6 +82,8 @@ public class RabbitMqListener {
                     lampEntity.setWarmWhite(report.getLedSettings().getWarmWhite());
                 }
 
+                lampEntity.setFirmwareVersion(report.getFirmwareVersion());
+
 
                 lampRepository.save(lampEntity);
 

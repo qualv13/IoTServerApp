@@ -141,7 +141,7 @@ public class UserController {
         // log.info("GET /users/me/lamps");
         try {
             String username = authentication.getName();
-            LocalDateTime threshold = LocalDateTime.now().minusSeconds(15);
+            LocalDateTime threshold = LocalDateTime.now().minusSeconds(120);
             List<Lamp> lampsToProcess;
 
             if ("admin".equals(username)) {
@@ -175,7 +175,7 @@ public class UserController {
                     result.add(new LampDto(
                             lamp.getId(),
                             lamp.isOn(),
-                            isOnline,
+                            lamp.isOnline(),
                             fleetId
                     ));
                 } catch (Exception e) {

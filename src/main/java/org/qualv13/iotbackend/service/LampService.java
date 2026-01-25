@@ -82,6 +82,7 @@ public class LampService {
         // Ręczne ustawienie koloru
         if (command.hasSetDirectSettingsCommand()) {
             lamp.setOn(true);
+            lamp.setOnline(true);
             IotProtos.DirectSettings ds = command.getSetDirectSettingsCommand().getDirectSettings();
             String hexColor = String.format("#%02x%02x%02x", ds.getRed(), ds.getGreen(), ds.getBlue());
             lamp.setColor(hexColor);
@@ -100,12 +101,14 @@ public class LampService {
         // Ustawienie konkretnego trybu
         else if (command.hasSetModeCommand()) {
             lamp.setOn(true);
+            lamp.setOnline(true);
             lamp.setActiveModeId(command.getSetModeCommand().getModeId());
             stateChanged = true;
         }
         // Blink LED, Reboot, OTA - nie zmieniają stanu w bazie trwale, tylko przelatują przez MQTT
         else if(command.hasSetPhotoWhiteSettingsCommand()){
             lamp.setOn(true);
+            lamp.setOnline(true);
             lamp.setActiveModeId(null);
             IotProtos.PhotoWhiteSetting pws = command.getSetPhotoWhiteSettingsCommand().getPhotoWhiteSetting();
             lamp.setPhotoWhiteIntensity(pws.getIntensity());
@@ -114,6 +117,7 @@ public class LampService {
         }
         else if (command.hasSetPhotoColorSettingsCommand()){
             lamp.setOn(true);
+            lamp.setOnline(true);
             lamp.setActiveModeId(null);
             IotProtos.PhotoColorSetting pcs = command.getSetPhotoColorSettingsCommand().getPhotoColorSetting();
             lamp.setPhotoColorIntensity(pcs.getIntensity());
@@ -710,7 +714,8 @@ public class LampService {
                             .setTs(metric.getDeviceTimestamp() != null ? metric.getDeviceTimestamp() : System.currentTimeMillis())
                             .setUptimeSeconds(metric.getUptimeSeconds() != null ? metric.getUptimeSeconds() : 0)
                             .setAmbientLight(metric.getAmbientLight() != null ? metric.getAmbientLight() : 0)
-                            .setAmbientNoise(metric.getAmbientNoise() != null ? metric.getAmbientNoise() : 0);
+                            .setAmbientNoise(metric.getAmbientNoise() != null ? metric.getAmbientNoise() : 0)
+                            .setFirmwareVersion(lamp.getFirmwareVersion() != null ? lamp.getFirmwareVersion() : "0");
 
                     if (metric.getTemperatures() != null && !metric.getTemperatures().isEmpty()) {
                         Arrays.stream(metric.getTemperatures().split(","))
