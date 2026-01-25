@@ -52,6 +52,22 @@ public class LampService {
             lamp.setModesConfigJson(null);
             lamp.setActiveModeId(null);
 
+            lamp.setRed(0); lamp.setGreen(0); lamp.setBlue(0);
+            lamp.setBrightness(50); lamp.setColor("#ffffff");
+            lamp.setReportInterval(60);
+
+            lamp.setColdWhite(0); lamp.setWarmWhite(0); lamp.setNeutralWhite(0);
+
+            lamp.setLastAmbientLight(null); lamp.setLastAmbientNoise(null);
+
+            lamp.setPhotoColorHue(0); lamp.setPhotoColorSaturation(0); lamp.setPhotoColorIntensity(0);
+
+            lamp.setPhotoWhiteTemp(0); lamp.setPhotoWhiteIntensity(0);
+
+            lamp.setModesConfigJson(null);
+
+            lamp.setActiveModeId(null);
+
             // 2. Usuwanie METRYK (Historii temperatur, jasności itp.)
             metricRepository.deleteByLampId(lampId);
 

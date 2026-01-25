@@ -57,7 +57,7 @@ public class OtaService {
         FirmwareRelease release = new FirmwareRelease();
         release.setVersion(version);
         release.setFilename(file.getOriginalFilename());
-        release.setDownloadUrl(publicUrlBase + "/" + key);
+        release.setDownloadUrl(publicUrlBase + key);
         release.setS3Key(key);
         release.setCreatedAt(LocalDateTime.now());
         release.setPublished(isPublished);
