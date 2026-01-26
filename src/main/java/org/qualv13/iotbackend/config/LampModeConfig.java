@@ -47,7 +47,7 @@ public class LampModeConfig {
         private Integer startHour;
         private Integer endHour;
 
-        private Integer transitionDurationMinutes;
+        private Integer transitionDurationSeconds;
 
         private Integer minBrightness;
         private Integer maxBrightness;

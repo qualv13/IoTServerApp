@@ -212,11 +212,13 @@ public class LampService {
                             javaEntry.setTriggerType("HOUR");
                             javaEntry.setStartHour(entry.getHourSetting().getStartSecondPastMidnight()); // Konwersja sekundy -> godziny (uproszczenie)
                             javaEntry.setEndHour(entry.getHourSetting().getEndSecondPastMidnight());
-                            javaEntry.setTransitionDurationMinutes(entry.getHourSetting().getTransitionDurationSeconds() / 60);
+                            javaEntry.setTransitionDurationSeconds(entry.getHourSetting().getTransitionDurationSeconds());
                         } else if (entry.hasBrightnessSettings()) {
                             javaEntry.setTriggerType("BRIGHTNESS");
                             javaEntry.setMinBrightness(entry.getBrightnessSettings().getMinBrightness());
                             javaEntry.setMaxBrightness(entry.getBrightnessSettings().getMaxBrightness());
+                            int seconds = entry.getBrightnessSettings().getTransitionDurationSeconds();
+                            javaEntry.setTransitionDurationSeconds(seconds);
                         }
 
                         // Action
@@ -334,12 +336,12 @@ public class LampService {
                             // Jeśli potrzebujesz dokładności co do sekundy, zmień typ w LampModeConfig na seconds
                             javaEntry.setStartHour(entry.getHourSetting().getStartSecondPastMidnight());
                             javaEntry.setEndHour(entry.getHourSetting().getEndSecondPastMidnight());
-                            javaEntry.setTransitionDurationMinutes(entry.getHourSetting().getTransitionDurationSeconds() / 60);
+                            javaEntry.setTransitionDurationSeconds(entry.getHourSetting().getTransitionDurationSeconds());
                         } else if (entry.hasBrightnessSettings()) {
                             javaEntry.setTriggerType("BRIGHTNESS");
                             javaEntry.setMinBrightness(entry.getBrightnessSettings().getMinBrightness());
                             javaEntry.setMaxBrightness(entry.getBrightnessSettings().getMaxBrightness());
-                            javaEntry.setTransitionDurationMinutes(entry.getBrightnessSettings().getTransitionDurationMinutes());
+                            javaEntry.setTransitionDurationSeconds(entry.getBrightnessSettings().getTransitionDurationSeconds());
                         }
 
                         // 2. Mapowanie Stanu Docelowego (Target State)
@@ -486,13 +488,13 @@ public class LampService {
                                         .setStartSecondPastMidnight((ent.getStartHour() != null ? ent.getStartHour() : 0) * 3600)
                                         .setEndSecondPastMidnight((ent.getEndHour() != null ? ent.getEndHour() : 0) * 3600)
                                         .setEndsNextDay(ent.getEndHour() != null && ent.getStartHour() != null && ent.getEndHour() < ent.getStartHour())
-                                        .setTransitionDurationSeconds((ent.getTransitionDurationMinutes() != null ? ent.getTransitionDurationMinutes() : 0) * 60)
+                                        .setTransitionDurationSeconds((ent.getTransitionDurationSeconds() != null ? ent.getTransitionDurationSeconds() : 0))
                                         .build());
                             } else if ("BRIGHTNESS".equals(ent.getTriggerType())) {
                                 entryBuilder.setBrightnessSettings(IotProtos.BrightnessSettings.newBuilder()
                                         .setMinBrightness(ent.getMinBrightness() != null ? ent.getMinBrightness() : 0)
                                         .setMaxBrightness(ent.getMaxBrightness() != null ? ent.getMaxBrightness() : 100)
-                                        .setTransitionDurationMinutes(ent.getTransitionDurationMinutes() != null ? ent.getTransitionDurationMinutes() : 0)
+                                        .setTransitionDurationSeconds(ent.getTransitionDurationSeconds() != null ? ent.getTransitionDurationSeconds() : 0)
                                         .build());
                             }
 
@@ -624,12 +626,13 @@ public class LampService {
                                 entryBuilder.setHourSetting(IotProtos.HourSetting.newBuilder()
                                         .setStartSecondPastMidnight((ent.getStartHour() != null ? ent.getStartHour() : 0) * 3600)
                                         .setEndSecondPastMidnight((ent.getEndHour() != null ? ent.getEndHour() : 0) * 3600)
-                                        .setTransitionDurationSeconds((ent.getTransitionDurationMinutes() != null ? ent.getTransitionDurationMinutes() : 0) * 60)
+                                        .setTransitionDurationSeconds((ent.getTransitionDurationSeconds() != null ? ent.getTransitionDurationSeconds() : 0))
                                         .build());
                             } else if ("BRIGHTNESS".equals(ent.getTriggerType())) {
                                 entryBuilder.setBrightnessSettings(IotProtos.BrightnessSettings.newBuilder()
                                         .setMinBrightness(ent.getMinBrightness() != null ? ent.getMinBrightness() : 0)
                                         .setMaxBrightness(ent.getMaxBrightness() != null ? ent.getMaxBrightness() : 100)
+                                                .setTransitionDurationSeconds((ent.getTransitionDurationSeconds() != null ? ent.getTransitionDurationSeconds() : 0))
                                         .build());
                             }
 

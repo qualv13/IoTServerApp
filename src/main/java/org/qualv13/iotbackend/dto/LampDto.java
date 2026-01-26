@@ -14,6 +14,8 @@ public class LampDto {
     @JsonProperty("isOn")
     private boolean isOn;
 
+    private String name;
+
     @JsonProperty("isOnline")
     private boolean isOnline;
 

@@ -175,6 +175,7 @@ public class UserController {
                     result.add(new LampDto(
                             lamp.getId(),
                             lamp.isOn(),
+                            lamp.getDeviceName(),
                             lamp.isOnline(),
                             fleetId
                     ));

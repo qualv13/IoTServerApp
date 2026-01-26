@@ -90,7 +90,7 @@ message HourSetting {
 message BrightnessSettings {
   uint32 min_brightness = 1;
   uint32 max_brightness = 2;
-  uint32 transition_duration_minutes = 3;
+  uint32 transition_duration_seconds = 3;
 }
 
 message LampState {
