@@ -87,11 +87,8 @@ public class Lamp {
     @Column(name = "is_online")
     private boolean isOnline = true;
 
-    // Przechowujemy JSON z listą trybów (do 10 slotów)
-    // TEXT pozwala na zapisanie długiego JSON-a
     @Column(columnDefinition = "TEXT")
     private String modesConfigJson;
 
-    // Pole pomocnicze: który tryb jest teraz aktywny
     private Integer activeModeId;
 }

@@ -17,19 +17,6 @@ public interface LampMetricRepository extends JpaRepository<LampMetric, Long> {
 
     Double getLampMetricByLampIdOrderByTimestampDesc(String lampId);
 
-    /**
-     * Pobiera najnowszy string 'temperatures' dla każdej lampy z podanej listy ID.
-     * Wybiera te metryki, których timestamp jest równy maksymalnemu timestampowi dla danego lampId.
-     */
-//    @Query("SELECT m.temperatures FROM LampMetric m " +
-//            "WHERE m.lampId IN :lampIds " +
-//            "AND m.timestamp = (" +
-//            "SELECT MAX(innerM.timestamp) " +
-//            "FROM LampMetric innerM " +
-//            "WHERE innerM.lampId = m.lampId" +
-//            ")")
-//    List<Double> findLatestTemperaturesForLampIds(@Param("lampIds") List<String> lampIds);
-
     @Query(value = """
         SELECT CAST(NULLIF(SPLIT_PART(m.temperatures, ',', 1), '') AS DOUBLE PRECISION)
         FROM lamp_metrics m
@@ -42,7 +29,6 @@ public interface LampMetricRepository extends JpaRepository<LampMetric, Long> {
         """, nativeQuery = true)
     List<Double> findLatestTemperaturesForLampIds(@Param("lampIds") List<String> lampIds);
 
-    // 1. Aktualna temperatura (KPI)
     @Query("SELECT m.temperatures FROM LampMetric m " +
                   "WHERE m.lampId IN :lampIds " +
                   "AND m.timestamp = (" +
@@ -51,19 +37,6 @@ public interface LampMetricRepository extends JpaRepository<LampMetric, Long> {
                   "WHERE sub.lampId = m.lampId" +
                   ")")
     List<String> findLatestTemperatures(@Param("lampIds") List<String> lampIds);
-
-    // Zwraca: [Godzina (String), Średnia Temperatura (Double)]
-    // Grupuje wyniki z ostatnich 24h po godzinie.
-//    @Query(value = """
-//        SELECT to_char(m.timestamp, 'HH24:00') as hour_bucket,
-//               AVG(CAST(NULLIF(m.temperatures, '') AS DOUBLE PRECISION)) as avg_temp
-//        FROM lamp_metrics m
-//        WHERE m.lamp_id IN :lampIds
-//          AND m.timestamp >= NOW() - INTERVAL '24 HOURS'
-//        GROUP BY hour_bucket
-//        ORDER BY hour_bucket
-//        """, nativeQuery = true)
-//    List<Object[]> getHourlyAverageTemperature(@Param("lampIds") List<String> lampIds);
 
     @Query(value = """
         SELECT to_char(m.timestamp, 'HH24:00') as hour_bucket, 

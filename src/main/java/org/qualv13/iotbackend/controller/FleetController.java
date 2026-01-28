@@ -44,7 +44,6 @@ public class FleetController {
     private final LampService lampService;
     private final LampMetricRepository lampMetricRepository;
 
-    // --- Fleet management ---
     @Operation(summary = "Pobierz moje floty", description = "Zwraca listę grup (flot) utworzonych przez użytkownika.")
     @GetMapping
     public ResponseEntity<List<FleetDto>> listMyFleets(Principal principal) {
@@ -110,7 +109,7 @@ public class FleetController {
         return ResponseEntity.ok().build();
     }
 
-    // --- Control & PROTOBUF (for whole fleet) ---
+    // --- Control & PROTOBUF  ---
     @Operation(summary = "Wyślij config do floty (Protobuf)",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     content = @Content(mediaType = "application/x-protobuf", schema = @Schema(type = "string", format = "binary"))
@@ -120,21 +119,16 @@ public class FleetController {
     public ResponseEntity<Void> setFleetConfig(@PathVariable Long fleetId,
                                                @RequestBody IotProtos.LampConfig config) {
         log.info("PUT /fleets/{}/config", fleetId);
-        // 1. MQTT
-        //mqttService.sendConfigToFleet(fleetId, config);
 
-        // 2. BAZA DANYCH
         Fleet fleet = fleetRepository.findById(fleetId)
                 .orElseThrow(() -> new RuntimeException("Fleet not found"));
 
         for (Lamp lamp : fleet.getLamps()) {
-            // Aktualizacja interwału, jeśli jest w configu
             if (config.hasInternalLampConfig()) {
                 int interval = config.getInternalLampConfig().getReportingIntervalSeconds();
                 if (interval > 0) lamp.setReportInterval(interval);
                 mqttService.sendConfigToLamp(lamp.getId(), config);
             }
-            // Tutaj można dodać więcej logiki wyciągania danych z configu
         }
 
         return ResponseEntity.ok().build();
@@ -152,24 +146,17 @@ public class FleetController {
     public ResponseEntity<Void> sendFleetCommand(@PathVariable Long fleetId,
                                                  @RequestBody IotProtos.LampCommand command) {
         log.info("POST /fleets/{}/command", fleetId);
-        // 1. MQTT
-        //mqttService.sendCommandToFleet(fleetId, command);
 
-        // 2. BAZA DANYCH
         Fleet fleet = fleetRepository.findById(fleetId)
                 .orElseThrow(() -> new RuntimeException("Fleet not found"));
 
-        // Próbujemy odgadnąć stan na podstawie komendy
         Boolean newState = null;
         if (command.hasSetDirectSettingsCommand()) {
-            newState = true; // Ustawienie koloru = włączenie
+            newState = true;
         }
-        // Jeśli dodasz komendę TurnOff, obsłuż ją tutaj:
-        // else if (command.hasTurnOffCommand()) newState = false;
 
         if (newState != null || true) {
             for (Lamp lamp : fleet.getLamps()) {
-                //lamp.setOn(newState);
                 mqttService.sendCommandToLamp(lamp.getId(), command);
                 lampService.updateLampStateFromCommand(lamp.getId(), command);
             }
@@ -178,7 +165,7 @@ public class FleetController {
         return ResponseEntity.ok().build();
     }
 
-    // GET Config floty (uproszczony)
+    // GET Config floty
     @Operation(summary = "Pobierz config floty (Protobuf)")
     @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/x-protobuf", schema = @Schema(type = "string", format = "binary")))
     @GetMapping(value = "/{fleetId}/config", produces = "application/x-protobuf")
@@ -192,14 +179,11 @@ public class FleetController {
                 .build();
     }
 
-    // ZMIANA: Zwracamy StatusReport (agregacja jest trudna, zwracamy pusty)
     @Operation(summary = "Pobierz status floty (Protobuf)")
     @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/x-protobuf", schema = @Schema(type = "string", format = "binary")))
     @GetMapping(value = "/{fleetId}/status", produces = "application/x-protobuf")
     public IotProtos.StatusReport getFleetStatus(@PathVariable Long fleetId) {
         log.info("GET /fleets/" + fleetId + "/status");
-        // Nowy StatusReport nie ma pola "isOn", więc zwracamy pusty obiekt
-        // Frontend i tak patrzy na listę lamp, a nie na ten endpoint dla floty.
         return IotProtos.StatusReport.newBuilder().setVersion(1).build();
     }
 
@@ -214,7 +198,6 @@ public class FleetController {
                 .map(Lamp::getId)
                 .toList();
 
-        // 3. Jeśli flota jest pusta, zwróć pustą listę (żeby nie robić query z pustym IN)
         if (lampIds.isEmpty()) {
             return ResponseEntity.ok(List.of());
         }

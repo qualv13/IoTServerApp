@@ -9,16 +9,13 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LampModeConfig {
-    private int modeId;      // ID trybu (np. 0-9)
-    private String name;     // Np. "Impreza", "Praca", "Noc"
+    private int modeId;      // ID trybu
+    private String name;
     private String type;     // "DISCO", "SCHEDULE", "PRESET"
 
-    // Wypełnione jest tylko jedno z poniższych (zależnie od type)
     private DiscoConfig disco;
     private ScheduleConfig schedule;
     private PresetConfig presets;
-
-    // --- Klasy wewnętrzne ---
 
     @Data
     @NoArgsConstructor
@@ -40,7 +37,6 @@ public class LampModeConfig {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ScheduleEntry {
-        // Wyzwalacz (Trigger)
         private String triggerType; // "HOUR", "BRIGHTNESS"
 
         // Pola dla Triggera
@@ -52,10 +48,9 @@ public class LampModeConfig {
         private Integer minBrightness;
         private Integer maxBrightness;
 
-        // Akcja (Action)
         private String actionType; // "DIRECT", "DISCO", "PHOTO_WHITE", "PHOTO_COLOR"
 
-        // Pola dla Akcji - Direct
+        // Direct
         private Integer red;
         private Integer green;
         private Integer blue;
@@ -63,12 +58,12 @@ public class LampModeConfig {
         private Integer coldWhite;
         private Integer neutralWhite;
 
-        // Pola dla Akcji - Disco
+        // Disco
         private String discoMode;
         private Integer speed;
         private Integer intensity;
 
-        // Pola dla Akcji - Photo
+        // Photo
         private Integer temperature;
         private Integer hue;
         private Integer saturation;
@@ -92,7 +87,7 @@ public class LampModeConfig {
         private Integer blue;
 
         private Integer warmWhite;
-        private Integer coldWhite; // Dla PhotoWhiteSetting ma to pole 'intensity' i 'temperature'
+        private Integer coldWhite;
         private Integer neutralWhite;
 
         private Integer intensity;

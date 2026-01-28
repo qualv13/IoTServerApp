@@ -25,7 +25,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import org.qualv13.iotbackend.dto.PresetDto; // To DTO dla frontendu (proste)
+import org.qualv13.iotbackend.dto.PresetDto;
 import org.qualv13.iotbackend.dto.json.*;
 
 import java.time.LocalDateTime;
@@ -59,15 +59,13 @@ public class LampController {
             IotProtos.StatusReport report = lampService.getLampStatusReport(lampId);
 
             if (report == null) {
-                // Zwracamy pusty raport (Default Instance)
                 return ResponseEntity.ok(IotProtos.StatusReport.getDefaultInstance());
             }
             return ResponseEntity.ok(report);
 
         } catch (Exception e) {
             log.error("ERROR GET /status for {}: {}", lampId, e.getMessage());
-            e.printStackTrace(); // Zobaczysz w konsoli Javy dokładny powód
-            // W razie awarii zwracamy pusty raport z aktualnym czasem, żeby front nie "umarł"
+            e.printStackTrace();
             return ResponseEntity.ok(IotProtos.StatusReport.newBuilder()
                     .setVersion(1)
                     .setTs(System.currentTimeMillis() / 1000)
@@ -104,7 +102,6 @@ public class LampController {
     @Operation(summary = "Wymuś synchronizację konfiguracji", description = "Pobiera config z bazy i wysyła ponownie do lampy przez MQTT")
     @PostMapping("/{lampId}/config/refresh")
     public ResponseEntity<Void> refreshConfig(@PathVariable String lampId) {
-        // Dodaj tu ewentualnie check uprawnień (getLampWithAuthCheck)
         lampService.refreshLampConfig(lampId);
         return ResponseEntity.ok().build();
     }
@@ -132,16 +129,13 @@ public class LampController {
 
         if (json != null && !json.isEmpty()) {
             try {
-                // 1. Parsujemy cały JSON konfiguracji
                 List<ModeConfigJson> modes = objectMapper.readValue(json, new TypeReference<>() {});
 
-                // 2. Szukamy trybu PRESET (modeId == 3)
                 ModeConfigJson presetMode = modes.stream()
                         .filter(m -> m.getModeId() == 3)
                         .findFirst()
                         .orElse(null);
 
-                // 3. Mapujemy dziwny JSON na proste DTO dla frontendu
                 if (presetMode != null && presetMode.getPresets() != null && presetMode.getPresets().getEntries() != null) {
                     List<PresetEntryJson> entries = presetMode.getPresets().getEntries();
                     for (int i = 0; i < entries.size(); i++) {
@@ -154,7 +148,6 @@ public class LampController {
             }
         }
 
-        // Jeśli lista pusta (brak JSON lub błąd), zwróć domyślne
         if (result.isEmpty()) {
             return ResponseEntity.ok(generateDefaultPresets());
         }
@@ -186,14 +179,13 @@ public class LampController {
                 modes = objectMapper.readValue(json, new TypeReference<>() {});
             }
 
-            // 1. Znajdź lub stwórz tryb PRESET (ID 3)
             ModeConfigJson presetMode = modes.stream()
                     .filter(m -> m.getModeId() == 3)
                     .findFirst()
                     .orElseGet(() -> {
                         ModeConfigJson newMode = new ModeConfigJson();
                         newMode.setModeId(3);
-                        newMode.setName("Mode 3"); // lub "Presets"
+                        newMode.setName("Mode 3");
                         newMode.setType("PRESET");
                         newMode.setPresets(new PresetContainer());
                         modes.add(newMode);
@@ -204,10 +196,8 @@ public class LampController {
 
             // 2. Konwersja DTO (frontend) -> JSON Entry (baza)
             List<PresetEntryJson> newEntries = new ArrayList<>();
-            // Frontend zawsze wysyła posortowane, ale dla pewności:
             dtos.sort(Comparator.comparingInt(PresetDto::getSlotIndex));
 
-            // Zakładamy max 5 slotów
             for (PresetDto dto : dtos) {
                 newEntries.add(mapDtoToEntry(dto));
             }
@@ -248,7 +238,6 @@ public class LampController {
             data.put("intensity", entry.getIntensity());
         }
 
-        // Nazwa presetu - generujemy ją dynamicznie, bo w JSONie lampy nie ma pola "name" dla pojedynczego wpisu
         String name = "Slot " + (index + 1);
         return new PresetDto(index, name, type, data);
     }
@@ -278,7 +267,6 @@ public class LampController {
         return entry;
     }
 
-    // Bezpieczne rzutowanie z Mapy (bo Jackson czasem daje Integer, czasem Double)
     private Integer toInt(Object obj) {
         if (obj instanceof Number) return ((Number) obj).intValue();
         return 0; // null safety
@@ -387,7 +375,6 @@ public class LampController {
                     }
 
                     try {
-                        // Parsowanie pierwszej wartości (np. "45,46" -> 45.0)
                         String val = tempStr.split(",")[0].trim();
                         return Double.parseDouble(val);
                     } catch (NumberFormatException e) {
@@ -401,16 +388,14 @@ public class LampController {
 
     @GetMapping("/{lampId}/history")
     public ResponseEntity<List<MetricPoint>> getLampHistory(@PathVariable String lampId) {
-        // Pobieramy 50 ostatnich rekordów (najnowsze na początku)
         List<LampMetric> metrics = metricRepository.findTop50ByLampIdOrderByTimestampDesc(lampId);
 
-        // Mapujemy na DTO i ODWRACAMY kolejność (wykres potrzebuje od najstarszego do najnowszego)
         List<MetricPoint> history = metrics.stream()
                 .map(m -> new MetricPoint(
-                        m.getTimestamp().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(), // Konwersja LocalDateTime -> Millis
+                        m.getTimestamp().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
                         m.getAmbientLight() != null ? m.getAmbientLight() : 0
                 ))
-                .sorted(Comparator.comparingLong(MetricPoint::getIdx)) // Sortujemy rosnąco (czasem)
+                .sorted(Comparator.comparingLong(MetricPoint::getIdx))
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(history);
@@ -451,7 +436,6 @@ public class LampController {
         Lamp lamp = lampRepository.findById(lampId)
                 .orElseThrow(() -> new RuntimeException("Lamp not found"));
 
-        // ZMIANA: Próg 15 sekund (szybka reakcja na offline)
         LocalDateTime threshold = LocalDateTime.now().minusSeconds(120);
 
         Optional<LampMetric> lastMetric = metricRepository.findFirstByLampIdOrderByTimestampDesc(lampId);
@@ -479,7 +463,6 @@ public class LampController {
             } catch (Exception e) {
                 log.warn("Error parsing temperature for lamp {}", lampId);
             }
-            // Konwersja Integer -> Long z zabezpieczeniem na null
             uptime = metric.getUptimeSeconds() != null
                     ? metric.getUptimeSeconds().longValue()
                     : 0L;
@@ -491,7 +474,6 @@ public class LampController {
             if (metric.getAmbientNoise() != null) ambNoise = metric.getAmbientNoise();
         }
 
-        // Jeśli lampa jest Offline, to na pewno nie świeci (logicznie)
         boolean effectiveIsOn = isCalculatedOnline && lamp.isOn();
 
         DetailedLampDto dto = DetailedLampDto.builder()

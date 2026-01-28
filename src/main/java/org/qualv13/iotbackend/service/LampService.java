@@ -48,7 +48,6 @@ public class LampService {
 
         if (lamp.getOwner() != null && !lamp.getOwner().getUsername().equals(username)) {
             log.info("Zmiana właściciela lampy {}. Czyszczenie danych historycznych.", lampId);
-            // 1. Reset konfiguracji
             lamp.setModesConfigJson(null);
             lamp.setActiveModeId(null);
 
@@ -68,10 +67,8 @@ public class LampService {
 
             lamp.setActiveModeId(null);
 
-            // 2. Usuwanie METRYK (Historii temperatur, jasności itp.)
             metricRepository.deleteByLampId(lampId);
 
-            // 3. Usuwanie ALERTÓW (Starych błędów)
             alertRepository.deleteByLampId(lampId);
         }
 
@@ -103,7 +100,6 @@ public class LampService {
             String hexColor = String.format("#%02x%02x%02x", ds.getRed(), ds.getGreen(), ds.getBlue());
             lamp.setColor(hexColor);
 
-            // kanały kolorów
             lamp.setRed(ds.getRed());
             lamp.setGreen(ds.getGreen());
             lamp.setBlue(ds.getBlue());
@@ -111,7 +107,7 @@ public class LampService {
             lamp.setNeutralWhite(ds.getNeutralWhite());
             lamp.setColdWhite(ds.getColdWhite());
 
-            lamp.setActiveModeId(null); // Wyjście z trybu automatycznego
+            lamp.setActiveModeId(null);
             stateChanged = true;
         }
         // Ustawienie konkretnego trybu
@@ -121,7 +117,7 @@ public class LampService {
             lamp.setActiveModeId(command.getSetModeCommand().getModeId());
             stateChanged = true;
         }
-        // Blink LED, Reboot, OTA - nie zmieniają stanu w bazie trwale, tylko przelatują przez MQTT
+        // Blink LED, Reboot, OTA
         else if(command.hasSetPhotoWhiteSettingsCommand()){
             lamp.setOn(true);
             lamp.setOnline(true);
@@ -148,10 +144,6 @@ public class LampService {
         if (stateChanged) {
             lampRepository.save(lamp);
 
-            // WAŻNE: Tutaj wysyłamy komendę do fizycznej lampy!
-            // Jeśli wywołanie przyszło z REST API, musimy popchnąć to na MQTT.
-            // Sprawdzamy, czy to nie jest pętla zwrotna (opcjonalnie).
-            // W prostym modelu: Zawsze wysyłamy.
             //mqttService.sendCommandToLamp(lampId, command);
         }
         //lampRepository.save(lamp);
@@ -173,13 +165,12 @@ public class LampService {
     public void updateLampConfig(String lampId, IotProtos.LampConfig protoConfig) {
         Lamp lamp = getLampWithAuthCheck(lampId);
 
-        // 1. Konfiguracja wewnętrzna (Interwał)
         if (protoConfig.hasInternalLampConfig()) {
             int interval = protoConfig.getInternalLampConfig().getReportingIntervalSeconds();
             if (interval > 0) lamp.setReportInterval(interval);
         }
 
-        // 2. Mapowanie PROTO -> JSON (Zapis do bazy)
+        // Mapowanie PROTO -> JSON (Zapis do bazy)
         if (protoConfig.getModeSettingsCount() > 0) {
             List<LampModeConfig> modesList = new ArrayList<>();
 
@@ -210,7 +201,7 @@ public class LampService {
                         // Trigger
                         if (entry.hasHourSetting()) {
                             javaEntry.setTriggerType("HOUR");
-                            javaEntry.setStartHour(entry.getHourSetting().getStartSecondPastMidnight()); // Konwersja sekundy -> godziny (uproszczenie)
+                            javaEntry.setStartHour(entry.getHourSetting().getStartSecondPastMidnight());
                             javaEntry.setEndHour(entry.getHourSetting().getEndSecondPastMidnight());
                             javaEntry.setTransitionDurationSeconds(entry.getHourSetting().getTransitionDurationSeconds());
                         } else if (entry.hasBrightnessSettings()) {
@@ -234,8 +225,6 @@ public class LampService {
                                 javaEntry.setWarmWhite(ds.getWarmWhite());
                                 javaEntry.setColdWhite(ds.getColdWhite());
                                 javaEntry.setNeutralWhite(ds.getNeutralWhite());
-                                // Uwaga: w Twoim LampModeConfig może brakować pola neutralWhite,
-                                // jeśli go nie ma, dodaj je lub zmapuj tutaj.
                             } else if (state.hasPhotoWhiteSetting()) {
                                 javaEntry.setActionType("PHOTO_WHITE");
                                 javaEntry.setIntensity(state.getPhotoWhiteSetting().getIntensity());
@@ -267,7 +256,7 @@ public class LampService {
                             javaEntry.setGreen(ds.getGreen());
                             javaEntry.setBlue(ds.getBlue());
                             javaEntry.setWarmWhite(ds.getWarmWhite());
-                            javaEntry.setColdWhite(ds.getColdWhite()); // lub neutral
+                            javaEntry.setColdWhite(ds.getColdWhite());
                             javaEntry.setNeutralWhite(ds.getNeutralWhite());
                         } else if (entry.hasPhotoWhiteSetting()) {
                             javaEntry.setType("WHITE");
@@ -308,7 +297,7 @@ public class LampService {
             for (IotProtos.ModeCombinedSetting protoMode : protoConfig.getModeSettingsList()) {
                 LampModeConfig javaMode = new LampModeConfig();
                 javaMode.setModeId(protoMode.getModeId());
-                javaMode.setName("Mode " + protoMode.getModeId()); // Domyślna nazwa
+                javaMode.setName("Mode " + protoMode.getModeId());
 
                 // --- A. DISCO ---
                 if (protoMode.hasDiscoModeSettings()) {
@@ -329,11 +318,8 @@ public class LampService {
                     for (var entry : pDaylight.getScheduleEntriesList()) {
                         LampModeConfig.ScheduleEntry javaEntry = new LampModeConfig.ScheduleEntry();
 
-                        // 1. Mapowanie Triggera (Wyzwalacza)
                         if (entry.hasHourSetting()) {
                             javaEntry.setTriggerType("HOUR");
-                            // Konwersja sekund (Proto) na godziny (Java Model - uproszczenie dla UI)
-                            // Jeśli potrzebujesz dokładności co do sekundy, zmień typ w LampModeConfig na seconds
                             javaEntry.setStartHour(entry.getHourSetting().getStartSecondPastMidnight());
                             javaEntry.setEndHour(entry.getHourSetting().getEndSecondPastMidnight());
                             javaEntry.setTransitionDurationSeconds(entry.getHourSetting().getTransitionDurationSeconds());
@@ -356,7 +342,7 @@ public class LampService {
                                 javaEntry.setBlue(ds.getBlue());
                                 javaEntry.setWarmWhite(ds.getWarmWhite());
                                 javaEntry.setColdWhite(ds.getColdWhite());
-                                javaEntry.setNeutralWhite(ds.getNeutralWhite()); // Odkomentuj jeśli dodasz to pole do LampModeConfig
+                                javaEntry.setNeutralWhite(ds.getNeutralWhite());
                             } else if (state.hasPhotoWhiteSetting()) {
                                 javaEntry.setActionType("PHOTO_WHITE");
                                 var pw = state.getPhotoWhiteSetting();
@@ -380,7 +366,6 @@ public class LampService {
                     var pPreset = protoMode.getPresetModeSetting();
                     List<LampModeConfig.PresetEntry> entries = new ArrayList<>();
 
-                    // W nowym proto `presets` to lista obiektów `LampState`
                     for (IotProtos.LampState state : pPreset.getPresetsList()) {
                         LampModeConfig.PresetEntry javaEntry = new LampModeConfig.PresetEntry();
 
@@ -426,16 +411,14 @@ public class LampService {
 
     @Transactional
     public void refreshLampConfig(String lampId) {
-        // 1. Generujemy Proto na podstawie JSON-a z bazy
         IotProtos.LampConfig config = generateProtoFromDb(lampId);
 
-        // 2. Wysyłamy do lampy
         mqttService.sendConfigToLamp(lampId, config);
 
         log.info("Wymuszono odświeżenie konfiguracji dla lampy {}", lampId);
     }
 
-    // Metoda: DB JSON -> Java Object -> Proto
+    // DB JSON -> Java Object -> Proto
     private IotProtos.LampConfig generateProtoFromDb(String lampId) {
         Lamp lamp = getLampWithAuthCheck(lampId);
 
@@ -443,13 +426,11 @@ public class LampService {
                 .setVersion(1)
                 .setTs(System.currentTimeMillis() / 1000);
 
-        // 1. Konfiguracja Wewnętrzna
         configBuilder.setInternalLampConfig(IotProtos.InternalLampConfig.newBuilder()
                 .setReportingIntervalSeconds(lamp.getReportInterval() != null ? lamp.getReportInterval() : 60)
-                .setWakeUpIntervalMinutes(10) // Domyślna wartość, lub dodaj pole do bazy
+                .setWakeUpIntervalMinutes(10)
                 .build());
 
-        // 2. Konfiguracja Trybów (Modes)
         if (lamp.getModesConfigJson() != null && !lamp.getModesConfigJson().isEmpty()) {
             try {
                 List<LampModeConfig> modesList = objectMapper.readValue(
@@ -471,7 +452,6 @@ public class LampService {
                                             .build()
                             );
                         } catch (Exception e) {
-                            // Fallback na OFF w razie błędu enuma
                             modeBuilder.setDiscoModeSettings(IotProtos.DiscoModeSettings.newBuilder().setMode(IotProtos.DiscoModes.OFF).build());
                         }
                     }
@@ -482,7 +462,7 @@ public class LampService {
                         for (var ent : javaMode.getSchedule().getEntries()) {
                             IotProtos.ScheduleEntry.Builder entryBuilder = IotProtos.ScheduleEntry.newBuilder();
 
-                            // 1. Trigger
+                            // Trigger
                             if ("HOUR".equals(ent.getTriggerType())) {
                                 entryBuilder.setHourSetting(IotProtos.HourSetting.newBuilder()
                                         .setStartSecondPastMidnight((ent.getStartHour() != null ? ent.getStartHour() : 0) * 3600)
@@ -498,7 +478,6 @@ public class LampService {
                                         .build());
                             }
 
-                            // 2. Target State (LampState)
                             IotProtos.LampState.Builder stateBuilder = IotProtos.LampState.newBuilder();
 
                             if ("DIRECT".equals(ent.getActionType())) {
@@ -508,7 +487,7 @@ public class LampService {
                                         .setBlue(ent.getBlue() != null ? ent.getBlue() : 0)
                                         .setWarmWhite(ent.getWarmWhite() != null ? ent.getWarmWhite() : 0)
                                         .setColdWhite(ent.getColdWhite() != null ? ent.getColdWhite() : 0)
-                                        .setNeutralWhite(ent.getNeutralWhite() != null ? ent.getNeutralWhite() : 0) // Default lub zmapuj z JSON
+                                        .setNeutralWhite(ent.getNeutralWhite() != null ? ent.getNeutralWhite() : 0)
                                         .build());
                             } else if ("PHOTO_WHITE".equals(ent.getActionType())) {
                                 stateBuilder.setPhotoWhiteSetting(IotProtos.PhotoWhiteSetting.newBuilder()
@@ -523,7 +502,6 @@ public class LampService {
                                         .build());
                             }
 
-                            // Jeśli stan został poprawnie zbudowany, dodajemy go
                             if (stateBuilder.hasDirectSettings() || stateBuilder.hasPhotoWhiteSetting() || stateBuilder.hasPhotoColorSetting()) {
                                 entryBuilder.setTargetState(stateBuilder.build());
                                 dayBuilder.addScheduleEntries(entryBuilder);
@@ -646,7 +624,7 @@ public class LampService {
                                         .setBlue(ent.getBlue() != null ? ent.getBlue() : 0)
                                         .setWarmWhite(ent.getWarmWhite() != null ? ent.getWarmWhite() : 0)
                                         .setColdWhite(ent.getColdWhite() != null ? ent.getColdWhite() : 0)
-                                        .setNeutralWhite(ent.getNeutralWhite() != null ? ent.getNeutralWhite() : 0) // Dodać jeśli jest w modelu Java
+                                        .setNeutralWhite(ent.getNeutralWhite() != null ? ent.getNeutralWhite() : 0)
                                         .build());
                             } else if ("PHOTO_WHITE".equals(ent.getActionType())) {
                                 stateBuilder.setPhotoWhiteSetting(IotProtos.PhotoWhiteSetting.newBuilder()
@@ -673,7 +651,6 @@ public class LampService {
                         IotProtos.PresetModeSetting.Builder presetBuilder = IotProtos.PresetModeSetting.newBuilder();
 
                         for (var ent : javaMode.getPresets().getEntries()) {
-                            // Budujemy LampState, bo Presets to teraz lista LampState
                             IotProtos.LampState.Builder stateBuilder = IotProtos.LampState.newBuilder();
 
                             if ("DIRECT".equals(ent.getType())) {
@@ -698,7 +675,6 @@ public class LampService {
                                         .build());
                             }
 
-                            // Dodajemy do listy presetów
                             if (stateBuilder.hasDirectSettings() || stateBuilder.hasPhotoWhiteSetting() || stateBuilder.hasPhotoColorSetting()) {
                                 presetBuilder.addPresets(stateBuilder);
                             }
@@ -721,7 +697,6 @@ public class LampService {
     public IotProtos.StatusReport getLampStatusReport(String lampId) {
         Optional<Lamp> lampOpt = Optional.of(getLampWithAuthCheck(lampId));
         if (lampOpt.isEmpty()) {
-            // Jeśli nie ma lampy, nie ma sensu szukać metryk. Zwracamy pusty/null.
             return null;
         }
         Lamp lamp = lampOpt.get();
@@ -747,7 +722,6 @@ public class LampService {
                                 .forEach(reportBuilder::addTemperatureReadings);
                     }
 
-                    // --- 4. MAPOWANIE LED SETTINGS (Stan lampy) ---
                     IotProtos.DirectSettings.Builder directSettingsBuilder = IotProtos.DirectSettings.newBuilder();
 
                     directSettingsBuilder.setRed(lamp.getRed() != null ? lamp.getRed() : 0);
@@ -759,26 +733,19 @@ public class LampService {
 
                     reportBuilder.setLedSettings(directSettingsBuilder);
 
-                    // --- MAPOWANIE ALERTÓW (Nowa część) ---
 
-                    // 1. Pobieramy alerty z bazy danych
                     List<LampAlert> activeAlerts = alertRepository.findByLampIdAndIsActiveTrue(lampId);
 
                     for (LampAlert entity : activeAlerts) {
-                        // Tworzymy builder alertu Protobuf
                         IotProtos.Alert.Builder protoAlert = IotProtos.Alert.newBuilder();
 
-                        // Mapujemy ID i Wiadomość
                         protoAlert.setId(entity.getId().intValue());
                         protoAlert.setMessage(entity.getMessage() != null ? entity.getMessage() : "Unknown Error");
 
-                        // Konwersja czasu (Java LocalDateTime -> Protobuf int64 timestamp)
                         if (entity.getTimestamp() != null) {
-                            // Zakładamy UTC, zmień ZoneOffset jeśli używasz czasu lokalnego
                             protoAlert.setTs(entity.getTimestamp().toInstant(java.time.ZoneOffset.UTC).toEpochMilli());
                         }
 
-                        // Mapowanie CAUSE (Integer z bazy -> Enum Proto)
                         if (entity.getAlertCode() != null) {
                             IotProtos.AlertCauses cause = IotProtos.AlertCauses.forNumber(entity.getAlertCode());
                             protoAlert.setCause(cause != null ? cause : IotProtos.AlertCauses.GENERAL);
@@ -786,7 +753,6 @@ public class LampService {
                             protoAlert.setCause(IotProtos.AlertCauses.GENERAL);
                         }
 
-                        // Mapowanie LEVEL (Integer z bazy -> Enum Proto)
                         if (entity.getAlertLevel() != null) {
                             IotProtos.AlertLevels level = IotProtos.AlertLevels.forNumber(entity.getAlertLevel());
                             protoAlert.setLevel(level != null ? level : IotProtos.AlertLevels.ERROR);
@@ -796,10 +762,8 @@ public class LampService {
 
                         protoAlert.setWillPersist(true);
 
-                        // Dodajemy gotowy alert do raportu
                         reportBuilder.addActiveAlerts(protoAlert);
                     }
-                    // --------------------------------------
 
                     return reportBuilder.build();
                 })
@@ -810,20 +774,13 @@ public class LampService {
         Lamp lamp = lampRepository.findById(lampId)
                 .orElseThrow(() -> new RuntimeException("Lampa nie istnieje: " + lampId));
 
-        // Pobieramy nazwę zalogowanego użytkownika
         String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        // --- UPROSZCZONA LOGIKA ADMINA (Szybki Fix) ---
-        // Zamiast sprawdzać role w bazie, sprawdzamy "na sztywno" nazwę użytkownika.
-        // Używamy equalsIgnoreCase, żeby zadziałało dla "admin", "Admin", "ADMIN".
         boolean isAdmin = "admin".equalsIgnoreCase(currentUsername);
 
-        // Log dla Twojej pewności (zobaczysz to w konsoli)
         log.info("AuthCheck: User='{}', IsAdmin={}, Owner='{}'",
                 currentUsername, isAdmin, lamp.getOwner() != null ? lamp.getOwner().getUsername() : "BRAK");
 
-        // --- WARUNEK BEZPIECZEŃSTWA ---
-        // Dostęp ma właściciel LUB admin.
         if (lamp.getOwner() != null && !lamp.getOwner().getUsername().equals(currentUsername) && !isAdmin) {
             log.warn("⛔ Odmowa dostępu dla '{}' do lampy '{}'", currentUsername, lampId);
             throw new org.springframework.security.access.AccessDeniedException("Nie masz uprawnień do sterowania tą lampą!");

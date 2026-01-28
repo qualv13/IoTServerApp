@@ -63,16 +63,13 @@ public class UserController {
     @PostMapping
     public ResponseEntity<MessageResponse> registerUser(@RequestBody RegisterDto dto) {
         log.info("POST /users");
-        // Check if user exists
         if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
             log.warn("Username already exists");
             return ResponseEntity.badRequest().body(new MessageResponse("Username already exists"));
         }
 
-        // Create user
         User user = new User();
         user.setUsername(dto.getUsername());
-        // Password must be stored as hash
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
 
         userRepository.save(user);
@@ -86,7 +83,6 @@ public class UserController {
     public ResponseEntity<Void> updateUser(@RequestBody UpdateUserDto dto, Authentication auth) {
         log.info("PUT /users/me");
         User user = userRepository.findByUsername(auth.getName()).orElseThrow();
-        // Must be unique
         if (dto.getUsername() != null && !dto.getUsername().isEmpty()) {
             user.setUsername(dto.getUsername());
         }
@@ -122,7 +118,6 @@ public class UserController {
         log.info("DELETE /users/me");
         User user = userRepository.findByUsername(auth.getName()).orElseThrow();
 
-        // Set lamp owner to null, don't delete them from database
         if(user.getLamps() != null) {
             user.getLamps().forEach(lamp -> {
                 lamp.setOwner(null);
@@ -162,7 +157,6 @@ public class UserController {
                 try {
                     boolean isOnline = false;
 
-                    // Bezpieczne pobieranie metryki
                     if (lamp.getId() != null) {
                         Optional<LampMetric> lastMetric = metricRepository.findFirstByLampIdOrderByTimestampDesc(lamp.getId());
                         if (lastMetric.isPresent() && lastMetric.get().getTimestamp() != null) {
@@ -181,7 +175,6 @@ public class UserController {
                     ));
                 } catch (Exception e) {
                     log.error("Skipping lamp {} due to error: {}", lamp.getId(), e.getMessage());
-                    // Skipujemy uszkodzoną lampę, ale zwracamy resztę listy!
                 }
             }
 
@@ -215,7 +208,6 @@ public class UserController {
         log.info("DELETE /users/me/lamps/{lampId}");
         User user = userRepository.findByUsername(auth.getName()).orElseThrow();
 
-        // Check if lamp is assigned to user
         Lamp lamp = lampRepository.findById(lampId).orElseThrow();
 
         if(auth.getName().equals("admin")) {

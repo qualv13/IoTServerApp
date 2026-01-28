@@ -19,7 +19,7 @@ public class FirmwareRelease {
 
     private String filename;    // np. "firmware_v1.0.5.bin"
     private String downloadUrl; // Publiczny link
-    private String s3Key;       // Klucz w R2/S3 (potrzebny do usuwania)
+    private String s3Key;       // Klucz w R2/S3
 
     private LocalDateTime createdAt;
     private boolean isPublished; // Czy widać tę wersję?

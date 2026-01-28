@@ -14,7 +14,6 @@ import org.springframework.context.annotation.Configuration;
                 version = "1.0",
                 description = "Dokumentacja API do zarządzania flotą lamp i urządzeń IoT"
         ),
-        // To sprawia, że kłódka autoryzacji działa globalnie dla wszystkich endpointów
         security = @SecurityRequirement(name = "bearerAuth")
 )
 @SecurityScheme(

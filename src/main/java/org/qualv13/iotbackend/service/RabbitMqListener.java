@@ -37,11 +37,11 @@ public class RabbitMqListener {
             String[] parts = topic.split("\\.");
             //log.info("Coś przyszło");
             if (parts.length < 2) {
-                log.warn("Ignoruję temat {} - za krótki format", topic); // Dodaj logowanie odrzuceń
+                log.warn("Ignoruję temat {} - za krótki format", topic);
                 return;
             }
             String lampId = parts[1];
-            String msgType = parts[2]; // np. "status"
+            String msgType = parts[2];
 
             lampRepository.findById(lampId).ifPresent(lamp -> {
                 if (!lamp.isOnline()) {
@@ -56,7 +56,6 @@ public class RabbitMqListener {
                 return;
             }
 
-            // Obsługa StatusReport (wcześniej metrics)
             if ("status".equals(msgType)) {
                 Lamp lampEntity = lampRepository.findById(lampId).orElse(null);
                 if (lampEntity == null) { return; }
@@ -65,13 +64,11 @@ public class RabbitMqListener {
                     lampEntity.setOnline(true);
                 }
 
-                // 1. Parsowanie nowego Proto
                 IotProtos.StatusReport report = IotProtos.StatusReport.parseFrom(payload);
 
-                // Zapisujemy odczyty do encji (dla Schedulera)
                 lampEntity.setLastAmbientLight(report.getAmbientLight());
                 lampEntity.setLastAmbientNoise(report.getAmbientNoise());
-                lampEntity.setOnline(true); // Przy okazji odświeżamy status
+                lampEntity.setOnline(true);
 
                 if(report.hasLedSettings()){
                     lampEntity.setRed(report.getLedSettings().getRed());
@@ -87,7 +84,6 @@ public class RabbitMqListener {
 
                 lampRepository.save(lampEntity);
 
-                // 2. Mapowanie na bazę danych
                 LampMetric metric = new LampMetric();
                 metric.setLampId(lampId);
                 metric.setTimestamp(LocalDateTime.now());
@@ -96,7 +92,6 @@ public class RabbitMqListener {
                 metric.setAmbientLight(report.getAmbientLight());
                 metric.setAmbientNoise(report.getAmbientNoise());
 
-                // Konwersja listy temperatur na String "20,21,22"
                 String tempStr = report.getTemperatureReadingsList().stream()
                         .map(String::valueOf)
                         .collect(Collectors.joining(","));
@@ -112,7 +107,6 @@ public class RabbitMqListener {
 
                 List<LampAlert> currentAlerts = alertRepository.findByLampIdAndIsActiveTrue(lampId);
                 if (!currentAlerts.isEmpty()) {
-                    // Deaktywuj wszystkie i zapisz nowe, lub usuń
                     alertRepository.deleteAll(currentAlerts);
                 }
 

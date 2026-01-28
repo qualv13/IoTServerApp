@@ -12,5 +12,5 @@ public class PresetDto {
     private int slotIndex;
     private String name;
     private String type;
-    private Map<String, Object> data; // Frontend wyśle tu JSON
+    private Map<String, Object> data;
 }

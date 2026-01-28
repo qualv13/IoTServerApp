@@ -14,14 +14,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MqttService {
 
-    // Adapter wyjściowy MQTT (zdefiniowany w MqttConfig)
     private final MqttPahoMessageHandler mqttOutbound;
 
-    // --- METODA POMOCNICZA (Wysyłanie bajtów) ---
     private void sendBytes(String topic, byte[] payload) {
         mqttOutbound.handleMessage(MessageBuilder.withPayload(payload)
                 .setHeader("mqtt_topic", topic)
-                .setHeader("mqtt_qos", 1) // QoS 1 - gwarancja dostarczenia
+                .setHeader("mqtt_qos", 1)
                 .build());
     }
 
@@ -53,7 +51,7 @@ public class MqttService {
         IotProtos.LampCommand command = IotProtos.LampCommand.newBuilder()
                 .setVersion(1)
                 .setTs(System.currentTimeMillis() / 1000)
-                .setRegisterLampCommand(regCmd) // Ustawiamy oneof
+                .setRegisterLampCommand(regCmd)
                 .build();
 
         sendBytes("lamps/" + lampId + "/command", command.toByteArray());

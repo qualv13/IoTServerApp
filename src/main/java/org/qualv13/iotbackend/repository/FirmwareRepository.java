@@ -10,9 +10,7 @@ import java.util.Optional;
 @Repository
 public interface FirmwareRepository extends JpaRepository<FirmwareRelease, Long> {
 
-    // To jest ta "brakująca funkcja", która zwraca najnowszą opublikowaną wersję
     Optional<FirmwareRelease> findTopByIsPublishedTrueOrderByCreatedAtDesc();
 
-    // Dla panelu admina: lista wszystkich wersji, najnowsze na górze
     List<FirmwareRelease> findAllByOrderByCreatedAtDesc();
 }

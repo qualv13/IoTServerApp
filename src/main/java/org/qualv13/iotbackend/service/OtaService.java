@@ -53,7 +53,6 @@ public class OtaService {
                         .build(),
                 RequestBody.fromBytes(file.getBytes()));
 
-        // Zapis w bazie
         FirmwareRelease release = new FirmwareRelease();
         release.setVersion(version);
         release.setFilename(file.getOriginalFilename());
@@ -71,7 +70,6 @@ public class OtaService {
     }
 
     // --- ADMIN: Publikowanie / Ukrywanie istniejącej wersji ---
-    // Przydatne, jeśli najpierw wrzucisz jako ukryte, a potem chcesz opublikować
     @Transactional
     public FirmwareRelease togglePublish(Long id, boolean isPublished) {
         FirmwareRelease release = firmwareRepository.findById(id)
@@ -87,7 +85,6 @@ public class OtaService {
         FirmwareRelease release = firmwareRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Wersja nie istnieje"));
 
-        // 1. Usuń plik z chmury (R2)
         try {
             if (release.getS3Key() != null) {
                 s3Client.deleteObject(DeleteObjectRequest.builder()
@@ -98,10 +95,8 @@ public class OtaService {
             }
         } catch (Exception e) {
             log.error("Nie udało się usunąć pliku z R2: {}", e.getMessage());
-            // Kontynuujemy usuwanie z bazy mimo błędu S3
         }
 
-        // 2. Usuń rekord z bazy
         firmwareRepository.delete(release);
     }
 
@@ -110,7 +105,6 @@ public class OtaService {
         Lamp lamp = lampRepository.findById(lampId).orElseThrow();
         String currentVer = lamp.getFirmwareVersion();
 
-        // Pobierz najnowszy PUBLIKOWANY firmware
         Optional<FirmwareRelease> latestOpt = firmwareRepository.findTopByIsPublishedTrueOrderByCreatedAtDesc();
 
         if (latestOpt.isEmpty()) {
@@ -119,8 +113,6 @@ public class OtaService {
 
         FirmwareRelease latest = latestOpt.get();
 
-        // Proste porównanie: jeśli stringi są różne, to jest update
-        // (W produkcji lepiej użyć biblioteki SemVer np. com.github.zafarkhaja:java-semver)
         boolean updateAvailable = currentVer == null || !currentVer.equals(latest.getVersion());
 
         return new OtaCheckResponse(

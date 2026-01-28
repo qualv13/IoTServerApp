@@ -3,7 +3,6 @@ package org.qualv13.iotbackend.dto.json;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
-// Pojedynczy wpis w tablicy "entries" (To co wysłałeś w przykładzie)
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PresetEntryJson {

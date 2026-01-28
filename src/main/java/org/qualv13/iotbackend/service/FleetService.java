@@ -54,8 +54,6 @@ public class FleetService {
 
     public List<Fleet> getMyFleets(String username) {
         User user = userRepository.findByUsername(username).orElseThrow();
-        // Zakładamy, że masz metodę w repozytorium lub filtrujesz (dla uproszczenia tutaj stream):
-        // Lepiej dodać w FleetRepository: List<Fleet> findByOwnerUsername(String username);
         return fleetRepository.findAll().stream()
                 .filter(f -> f.getOwner() != null && f.getOwner().getUsername().equals(username))
                 .collect(Collectors.toList());

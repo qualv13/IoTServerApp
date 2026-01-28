@@ -8,18 +8,15 @@ import java.util.Map;
 @Data
 @Builder
 public class DetailedStatsDto {
-    // Podstawowe KPI
     private long totalDevices;
     private long onlineDevices;
     private double averageTemperature;
-    private double estimatedPowerUsageWatts; // NOWOŚĆ: Szacowane zużycie prądu
+    private double estimatedPowerUsageWatts;
 
-    // Dane do wykresów kołowych/pączkowych
-    private Map<String, Long> colorDistribution;     // Jakie kolory dominują?
-    private Map<String, Long> firmwareDistribution;  // Wersje softu (ważne dla floty!)
-    private Map<String, Long> modeDistribution;      // Ile lamp jest w trybie DISCO, a ile STATIC?
+    private Map<String, Long> colorDistribution;
+    private Map<String, Long> firmwareDistribution;
+    private Map<String, Long> modeDistribution;
 
-    // Dane do wykresów liniowych (Historia)
     private List<String> historyLabels; // Oś X (godziny)
     private List<Double> historyValues; // Oś Y (temperatura/jasność)
 }

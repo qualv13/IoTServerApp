@@ -35,11 +35,9 @@ public class AuthController {
                 )
         );
 
-        // Download user
         User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found")); // shouldn't happen after authentication
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Token generation
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
@@ -56,11 +54,9 @@ public class AuthController {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
             if (jwtService.isTokenValid(refreshToken, userDetails)) {
-                // Generating new tokens
                 User user = (User) userDetails;
 
                 String newAccessToken = jwtService.generateAccessToken(user);
-                // optional : new refresh token
                 String newRefreshToken = jwtService.generateRefreshToken(user);
 
                 return ResponseEntity.ok(new AuthResponse(newAccessToken, newRefreshToken));

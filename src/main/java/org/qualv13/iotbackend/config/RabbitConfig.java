@@ -16,24 +16,17 @@ public class RabbitConfig {
     @Value("${mqtt.password}") private String password;
     @Value("${mqtt.host:rabbitmq-mqtt-kierzno}") private String host;
     @Value("${mqtt.port:5672}") private String port;
-    //@Value("${mqtt.virtualhost}")
-    //private String virtualHost;
 
     @Value("${mqtt.broker-url:tcp://srv38.mikr.us:40131}")
     private String brokerUrl;
 
-    // Nazwa kolejki, w której będą czekać wiadomości
     public static final String QUEUE_NAME = "lamps_metrics_queue";
 
-    // 1. Tworzymy trwałą kolejkę (durable = true)
-    // Dzięki temu, nawet jak zrestartujesz RabbitMQ, kolejka przetrwa.
     @Bean
     public Queue myQueue() {
         return new Queue(QUEUE_NAME, true);
     }
 
-    // 2. Definiujemy Exchange.
-    // DLA MQTT W RABBITMQ TO MUSI BYĆ "amq.topic"!
     @Bean
     public TopicExchange mqttExchange() {
         return new TopicExchange("amq.topic");
@@ -51,9 +44,6 @@ public class RabbitConfig {
         return connectionFactory;
     }
 
-    // 3. Wiążemy kolejkę z Exchangem.
-    // Routing Key "lamps.#" oznacza: łap wszystko co zaczyna się od "lamps/"
-    // (W MQTT # to wildcard wielopoziomowy)
     @Bean
     public Binding binding(Queue queue, TopicExchange exchange) {
         return BindingBuilder.bind(queue).to(exchange).with("lamps.*.status");

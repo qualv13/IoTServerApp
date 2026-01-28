@@ -6,5 +6,5 @@ import java.util.List;
 
 public interface LampAlertRepository extends JpaRepository<LampAlert, Long> {
     List<LampAlert> findByLampIdAndIsActiveTrue(String lampId);
-    void deleteByLampId(String lampId); // Opcjonalnie do czyszczenia
+    void deleteByLampId(String lampId);
 }

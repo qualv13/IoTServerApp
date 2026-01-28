@@ -29,26 +29,21 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configure(http)) // Enable CORS
                 .authorizeHttpRequests(auth -> auth
-                        // TODO: working security filter
                         .requestMatchers("/", "/index.html", "/static/**", "/*.js", "/*.css", "/favicon.ico").permitAll()
-                        .requestMatchers("/api/mqtt/auth/**").permitAll() // RabbitMQ uderza bez tokena JWT
+                        .requestMatchers("/api/mqtt/auth/**").permitAll() // RabbitMQ bez tokena JWT
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
                         .requestMatchers("/error").permitAll()
-                        // Permit all RabbitMQ auth callbacks
                         .requestMatchers(HttpMethod.POST, "/api/mqtt/auth/**").permitAll()
-                        // Login and Register
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/auth/login", "/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users").permitAll() // Rejestracja
 
-                        // Options
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        //
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
@@ -73,7 +68,7 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
-        config.addAllowedOriginPattern("*"); // Dla pewności
+        config.addAllowedOriginPattern("*");
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
         source.registerCorsConfiguration("/**", config);

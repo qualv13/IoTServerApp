@@ -40,7 +40,6 @@ public class LampModeConfig {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ScheduleEntry {
-        // Wyzwalacz (Trigger)
         private String triggerType; // "HOUR", "BRIGHTNESS"
 
         // Pola dla Triggera
@@ -89,7 +88,7 @@ public class LampModeConfig {
         private Integer blue;
 
         private Integer warmWhite;
-        private Integer coldWhite; // Dla PhotoWhiteSetting ma to pole 'intensity' i 'temperature'
+        private Integer coldWhite;
 
         private Integer intensity;
         private Integer temperature;
