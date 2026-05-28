@@ -1,6 +1,8 @@
-<!-- <p align="center">
-  <img src="./assets/iotserverapp-banner.png" alt="IoTServerApp banner" width="100%" />
-</p> -->
+<p align="center">
+  <!-- <img src="./assets/iotserverapp-banner.png" alt="IoTServerApp banner" width="100%" /> -->
+  <img width="742" height="41" alt="{E1082DD7-1500-4994-BE77-0B693C5D4F1A}" src="https://github.com/user-attachments/assets/87591812-89db-4a8a-9ba1-9f54df3c56c1" />
+
+</p> 
 
 <h1 align="center">IoTServerApp</h1>
 
@@ -20,7 +22,7 @@
 
 ---
 
-## Overview
+## Overview [Live frontend](https://iot-frontend-2r8o.onrender.com/) . Screenshots below
 
 **IoTServerApp** is a Spring Boot backend for operating IoT-enabled smart lamps at scale. It combines secure user management, fleet-level device orchestration, real-time MQTT messaging, telemetry processing, and firmware lifecycle management in one platform.
 
@@ -31,6 +33,8 @@ This project demonstrates practical backend engineering across:
 - cloud-backed OTA delivery,
 - operational monitoring and scheduling,
 - containerized local deployment.
+
+
 
 ## Value Proposition
 
@@ -402,31 +406,15 @@ The project includes **SpringDoc OpenAPI** support.
 | Stats | Metrics and analytics |
 | OTA | Firmware release and update workflows |
 
-> Placeholder: add Swagger UI URL once deployed  
-> Example: `http://localhost:40142/swagger-ui/index.html`
-
 ---
 
 ## Screenshots
 
-> Placeholder section for polished GitHub presentation assets.
-
-### Suggested screenshots
-1. Login / auth flow
-2. Lamp dashboard
-3. Fleet management view
-4. Telemetry charts
-5. OTA firmware management screen
-6. RabbitMQ / MQTT integration overview
-
-```text
-github-readmes/assets/
-├── iotserverapp-banner.png
-├── iotserverapp-dashboard.png
-├── iotserverapp-fleet.png
-├── iotserverapp-telemetry.png
-└── iotserverapp-architecture.png
-```
+<img width="975" height="603" alt="{0E937B49-EE0F-4392-AC27-F23BC36D0C92}" src="https://github.com/user-attachments/assets/364879cb-8b04-44ca-99ff-9ca314b19aea" />
+<img width="977" height="499" alt="{D0EBA7BA-3A24-48D6-9A9B-B734DA10D8EB}" src="https://github.com/user-attachments/assets/9778d1f5-09e3-4afd-b815-f71209f22cae" />
+<img width="977" height="704" alt="{3835CA20-0F10-4DFF-B295-DFE83A1EE8C0}" src="https://github.com/user-attachments/assets/48a40c73-6bff-4d61-8492-3129c537c991" />
+<img width="976" height="497" alt="{1F5F3150-00D2-4B65-A061-0B85E26CB180}" src="https://github.com/user-attachments/assets/90b1b016-7639-4aa7-9768-a01cee8672f6" />
+<img width="975" height="615" alt="{C8767108-1B7D-450F-B8BF-FE0876E55505}" src="https://github.com/user-attachments/assets/fe7c94a8-b140-40e8-bff5-b24354553915" />
 
 ---
 
@@ -496,18 +484,9 @@ Contributions are welcome.
 
 The current public README references **MIT**.
 
-> Verify that a `LICENSE` file exists in the repository before publishing this README as the canonical project README.
-
 ---
 
 ## Contact and Links
 
 - GitHub profile: [qualv13](https://github.com/qualv13)
 - Repository: [qualv13/IoTServerApp](https://github.com/qualv13/IoTServerApp)
-
-If you want this README to stand out further, add:
-- a real product banner,
-- architecture diagram,
-- Swagger screenshot,
-- telemetry dashboard screenshots,
-- a short demo GIF of lamp control.
