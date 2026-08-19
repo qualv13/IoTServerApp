@@ -420,15 +420,15 @@ The project includes **SpringDoc OpenAPI** support.
 
 ## Testing
 
-The Maven configuration and dependencies indicate support for:
+**Current state: the test suite is disabled.** `src/test` holds 15 JUnit 5
+classes covering controllers, services, repositories, messaging and security,
+but all of them are commented out. The only test that runs today is the Spring
+context check in `IoTServerAppApplicationTests`.
 
-- Unit tests with JUnit 5
-- Integration tests with Testcontainers
-- Security-focused tests
-- Messaging-related tests
-- H2-backed test execution
+The build already wires in JUnit 5, Testcontainers, H2 and Spring Security Test,
+so bringing the suite back is a code change, not a dependency change.
 
-Run tests with:
+Run what there is with:
 
 ```bash
 mvn test
