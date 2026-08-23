@@ -11,6 +11,10 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/qualv13/IoTServerApp/actions/workflows/ci.yml"><img src="https://github.com/qualv13/IoTServerApp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+</p>
+
+<p align="center">
   <a href="https://github.com/qualv13/IoTServerApp"><img src="https://img.shields.io/badge/GitHub-IoTServerApp-181717?style=for-the-badge&logo=github" alt="GitHub"></a>
   <img src="https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 17">
   <img src="https://img.shields.io/badge/Spring_Boot-3.3.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot 3.3.5">
@@ -420,19 +424,39 @@ The project includes **SpringDoc OpenAPI** support.
 
 ## Testing
 
-**Current state: the test suite is disabled.** `src/test` holds 15 JUnit 5
-classes covering controllers, services, repositories, messaging and security,
-but all of them are commented out. The only test that runs today is the Spring
-context check in `IoTServerAppApplicationTests`.
-
-The build already wires in JUnit 5, Testcontainers, H2 and Spring Security Test,
-so bringing the suite back is a code change, not a dependency change.
-
-Run what there is with:
-
 ```bash
 mvn test
 ```
+
+9 tests run on every push, against H2 in memory with the MQTT client mocked
+out. No database, no broker and no credentials required, which is the point:
+a test that only passes on the machine it was written on is not a test.
+
+| Class | Covers | Tests |
+| --- | --- | --- |
+| `AuthControllerTest` | login, refresh, account deletion | 2 |
+| `FleetControllerTest` | fleet creation and lamp assignment | 2 |
+| `JwtServiceTest` | token issue and validation | 2 |
+| `FleetServiceTest` | fleet service logic | 1 |
+| `LampMetricRepositoryTest` | metric queries | 1 |
+| `IoTServerAppApplicationTests` | the context starts | 1 |
+
+### Still parked
+
+Six more classes in `src/test` are commented out, and they are not
+decoration: uncommented, they compile and run, they just do not pass yet.
+
+| Class | Why it is parked |
+| --- | --- |
+| `LampControllerTest`, `LampControllerProtoTest`, `OtaControllerTest`, `UserControllerTest` | assertions written against older response shapes |
+| `LampServiceTest` | `LampService` gained two constructor arguments (`LampAlertRepository`, `MqttService`) |
+| `RabbitMqListenerTest` | one assertion drifted from the current listener |
+| `StatsServiceTest` | `getUserStats` returns `DetailedStatsDto` now, with a different API |
+| `MqttListenerServiceTest` | its subject, `MqttListenerService`, is itself commented out; the MQTT path moved to `RabbitMqListener` |
+
+That is 7 failing assertions, not 7 broken features. Each one is a decision
+about what the endpoint should return today, which is why they are listed here
+instead of being quietly deleted.
 
 ---
 
